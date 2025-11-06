@@ -41,8 +41,8 @@ class AppDrawer extends StatelessWidget {
                   context: context,
                   icon: Icons.restaurant_outlined,
                   selectedIcon: Icons.restaurant,
-                  title: 'Food Diary',
-                  subtitle: 'Track your meals',
+                  title: 'History',
+                  subtitle: 'See health logs',
                   route: '/food-diary',
                 ),
                 //_buildNavigationItem(
