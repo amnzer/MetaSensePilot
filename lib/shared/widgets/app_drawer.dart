@@ -6,7 +6,7 @@ import '../../core/themes/app_theme.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
-
+  // note: many routes are now inaccessible
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -19,6 +19,8 @@ class AppDrawer extends StatelessWidget {
                 vertical: 2,
               ), // Minimal padding for Dynamic Island devices
               children: [
+                _buildSectionHeader('General'),
+                const Divider(height: 8),
                 _buildNavigationItem(
                   context: context,
                   icon: Icons.dashboard_outlined,
@@ -27,14 +29,14 @@ class AppDrawer extends StatelessWidget {
                   subtitle: 'Overview & insights',
                   route: '/dashboard',
                 ),
-                _buildNavigationItem(
-                  context: context,
-                  icon: Icons.add_circle_outline,
-                  selectedIcon: Icons.add_circle,
-                  title: 'Add Data',
-                  subtitle: 'Log your metrics',
-                  route: '/data-entry',
-                ),
+                //_buildNavigationItem(
+                //  context: context,
+                //  icon: Icons.add_circle_outline,
+                //  selectedIcon: Icons.add_circle,
+                //  title: 'Add Data',
+                //  subtitle: 'Log your metrics',
+                //  route: '/data-entry',
+                //),
                 _buildNavigationItem(
                   context: context,
                   icon: Icons.restaurant_outlined,
@@ -43,14 +45,14 @@ class AppDrawer extends StatelessWidget {
                   subtitle: 'Track your meals',
                   route: '/food-diary',
                 ),
-                _buildNavigationItem(
-                  context: context,
-                  icon: Icons.favorite_outline,
-                  selectedIcon: Icons.favorite,
-                  title: 'Health Log',
-                  subtitle: 'Symptoms & wellness',
-                  route: '/health-logging',
-                ),
+                //_buildNavigationItem(
+                //  context: context,
+                //  icon: Icons.favorite_outline,
+                //  selectedIcon: Icons.favorite,
+                //  title: 'Health Log',
+                //  subtitle: 'Symptoms & wellness',
+                //  route: '/health-logging',
+                //),
                 _buildNavigationItem(
                   context: context,
                   icon: Icons.analytics_outlined,
@@ -59,50 +61,50 @@ class AppDrawer extends StatelessWidget {
                   subtitle: 'Trends & reports',
                   route: '/analytics',
                 ),
-                _buildNavigationItem(
-                  context: context,
-                  icon: Icons.calendar_today_outlined,
-                  selectedIcon: Icons.calendar_today,
-                  title: 'Calendar',
-                  subtitle: 'Schedule & reminders',
-                  route: '/calendar',
-                ),
-                const Divider(height: 8), // Reduced from 16 to 8
-                _buildSectionHeader('Health Tools'),
-                _buildNavigationItem(
-                  context: context,
-                  icon: Icons.medication_outlined,
-                  selectedIcon: Icons.medication,
-                  title: 'Medications',
-                  subtitle: 'Track supplements',
-                  route: '/medications',
-                ),
-                _buildNavigationItem(
-                  context: context,
-                  icon: Icons.school_outlined,
-                  selectedIcon: Icons.school,
-                  title: 'Education',
-                  subtitle: 'Learn about ketosis',
-                  route: '/education',
-                ),
-                _buildNavigationItem(
-                  context: context,
-                  icon: Icons.group_outlined,
-                  selectedIcon: Icons.group,
-                  title: 'Community',
-                  subtitle: 'Connect with others',
-                  route: '/community',
-                ),
-                const Divider(height: 8), // Reduced from 16 to 8
-                _buildSectionHeader('Account'),
-                _buildNavigationItem(
-                  context: context,
-                  icon: Icons.person_outline,
-                  selectedIcon: Icons.person,
-                  title: 'Profile',
-                  subtitle: 'Personal information',
-                  route: '/profile',
-                ),
+                //_buildNavigationItem(
+                //  context: context,
+                //  icon: Icons.calendar_today_outlined,
+                //  selectedIcon: Icons.calendar_today,
+                //  title: 'Calendar',
+                //  subtitle: 'Schedule & reminders',
+                //  route: '/calendar',
+                //),
+                //const Divider(height: 8), // Reduced from 16 to 8
+                //_buildSectionHeader('Health Tools'),
+                //_buildNavigationItem(
+                //  context: context,
+                //  icon: Icons.medication_outlined,
+                //  selectedIcon: Icons.medication,
+                //  title: 'Medications',
+                //  subtitle: 'Track supplements',
+                //  route: '/medications',
+                //),
+                //_buildNavigationItem(
+                //  context: context,
+                //  icon: Icons.school_outlined,
+                //  selectedIcon: Icons.school,
+                //  title: 'Education',
+                //  subtitle: 'Learn about ketosis',
+                //  route: '/education',
+                //),
+                //_buildNavigationItem(
+                //  context: context,
+                //  icon: Icons.group_outlined,
+                //  selectedIcon: Icons.group,
+                //  title: 'Community',
+                //  subtitle: 'Connect with others',
+                //  route: '/community',
+                //),
+                //const Divider(height: 8), // Reduced from 16 to 8
+                //_buildSectionHeader('Account'),
+                //_buildNavigationItem(
+                //  context: context,
+                //  icon: Icons.person_outline,
+                //  selectedIcon: Icons.person,
+                //  title: 'Profile',
+                //  subtitle: 'Personal information',
+                //  route: '/profile',
+                //),
                 _buildNavigationItem(
                   context: context,
                   icon: Icons.settings_outlined,
