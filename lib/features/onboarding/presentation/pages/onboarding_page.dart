@@ -18,21 +18,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   final List<OnboardingItem> _pages = [
     OnboardingItem(
-      title: 'Welcome to\nMetabolic Health Companion',
+      title: 'Welcome to MetaStats',
       description:
-          'Support and encouragement for the N=1 citizen scientist pursuing personalized metabolic health through ketosis.',
+          'Giving insight into your metabolic health through stats and dashboards',
       icon: Icons.health_and_safety,
     ),
     OnboardingItem(
-      title: 'Track Your\nGlucose & Ketones',
+      title: 'Glucose Analysis',
       description:
-          'Monitor your blood glucose and ketone levels to calculate your Glucose-Ketone Index (GKI) for optimal therapeutic ranges.',
+          'See how your glucose levels change throughout days and years',
       icon: Icons.timeline,
     ),
     OnboardingItem(
       title: 'Personalized\nInsights',
       description:
-          'Get AI-driven insights and recommendations based on your metabolic data to optimize your health journey.',
+          'Get AI-driven insights and recommendations based on your glucose data to optimize your health journey.',
       icon: Icons.psychology,
     ),
   ];

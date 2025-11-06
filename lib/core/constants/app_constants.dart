@@ -1,6 +1,6 @@
 class AppConstants {
   // App Info
-  static const String appName = 'Metabolic Health Companion';
+  static const String appName = 'MetaStats';
   static const String appVersion = '1.0.0';
 
   // Therapeutic Ranges

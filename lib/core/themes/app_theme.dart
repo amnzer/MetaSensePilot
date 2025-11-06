@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 class AppTheme {
   // Primary health-focused color scheme
-  static const Color primaryColor = Color(0xFF00A86B); // Medical green
+  static const Color primaryColor = Color.fromARGB(255, 143, 171, 212); // Medical green
   static const Color secondaryColor = Color(0xFF4CAF50); // Bright green
   static const Color accentColor = Color(0xFF81C784); // Light green
   static const Color backgroundColor = Color(0xFFF8F9FA); // Very light gray
@@ -24,7 +24,7 @@ class AppTheme {
   static const Color criticalColor = Color(0xFFE53E3E); // Red
 
   // Text colors
-  static const Color textPrimaryColor = Color(0xFF2D3748); // Dark gray
+  static const Color textPrimaryColor = Color.fromARGB(255, 45, 55, 72); // Dark gray
   static const Color textSecondaryColor = Color(0xFF4A5568); // Medium gray
   static const Color textTertiaryColor = Color(0xFF718096); // Light gray
 

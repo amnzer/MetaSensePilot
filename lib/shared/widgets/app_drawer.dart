@@ -157,12 +157,12 @@ class AppDrawer extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Metabolic Health Companion',
+                      'MetaStats',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         height: 1.0,
-                        fontSize: 10,
+                        fontSize: 20,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -172,7 +172,7 @@ class AppDrawer extends StatelessWidget {
                       'v${AppConstants.appVersion} • John Doe',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.white.withOpacity(0.8),
-                        fontSize: 8,
+                        fontSize: 12,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
