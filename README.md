@@ -1,4 +1,4 @@
-# KetoPilot 🚀
+#MetaSensePilot 🚀
 
 A sophisticated Flutter application for metabolic health optimization, focused on gram-centric macro tracking and biomarker monitoring for ketogenic therapy.
 
