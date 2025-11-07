@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_constants.dart';
@@ -20,6 +21,12 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   int _selectedIndex = 0;
+  String _selectedMetric = 'Glucose';
+  String _selectedRange = 'Day';
+
+  final List<String> _metricOptions = ['Glucose', 'Ketones'];
+  final List<String> _rangeOptions = ['Day', 'Week', 'Month'];
+
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +59,7 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Column(
             children: [
               _buildWelcomeSection(),
+              _buildGlucoseKetoneChart(),
               _buildGkiCard(),
               _buildQuickActionsGrid(),
               _buildMacroPreviewSection(),
@@ -156,6 +164,151 @@ class _DashboardPageState extends State<DashboardPage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
+
+Widget _buildGlucoseKetoneChart() {
+  final bool isGlucose = _selectedMetric == 'Glucose';
+  final String yAxisLabel = isGlucose ? 'mg/dL' : 'mmol/L';
+
+  // TO DO: replace dummy data w real sensor data
+  final List<FlSpot> glucoseData = [
+    const FlSpot(0, 85),
+    const FlSpot(1, 90),
+    const FlSpot(2, 80),
+    const FlSpot(3, 95),
+  ];
+
+  final List<FlSpot> ketoneData = [
+    const FlSpot(0, 1.2),
+    const FlSpot(1, 1.1),
+    const FlSpot(2, 1.4),
+    const FlSpot(3, 1.0),
+  ];
+
+  final List<FlSpot> chartData = isGlucose ? glucoseData : ketoneData;
+  const double dotSize = 4.5;
+
+  return Card(
+    margin: const EdgeInsets.all(16),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+     
+          Text(
+            "Daily Tracker",
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              DropdownButton<String>(
+                value: _selectedMetric,
+                items: _metricOptions
+                    .map((metric) => DropdownMenuItem(
+                          value: metric,
+                          child: Text(metric),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedMetric = value!;
+                  });
+                },
+              ),
+              const Spacer(),
+              DropdownButton<String>(
+                value: _selectedRange,
+                items: _rangeOptions
+                    .map((range) => DropdownMenuItem(
+                          value: range,
+                          child: Text(range),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedRange = value!;
+                  });
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          SizedBox(
+            height: 220,
+            child: LineChart(
+              LineChartData(
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: chartData,
+                    isCurved: true,
+                    color: AppTheme.primaryColor,
+                    barWidth: 3,
+
+                   
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) =>
+                            FlDotCirclePainter(
+                          radius: dotSize,
+                          color: AppTheme.primaryColor,
+                          strokeWidth: 1.2,
+                          strokeColor: Colors.white,
+                        ),
+                    ),
+                  ),
+                ],
+
+              
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    axisNameWidget: Text(yAxisLabel),
+                    axisNameSize: 20,
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 36,
+                      getTitlesWidget: (value, meta) => Text(
+                        value.toInt().toString(),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    axisNameWidget: const Text("Time"),
+                    axisNameSize: 22,
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) => Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                ),
+
+                gridData: FlGridData(show: true),
+                borderData: FlBorderData(show: true),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+
 
   Widget _buildWelcomeSection() {
     return Container(
