@@ -61,6 +61,9 @@ dependencies:
   
   # Charts and Graphs
   fl_chart: ^0.66.0
+
+  # BLE
+  flutter_blue_plus: ^2.0.1
   
   # Form Validation
   formz: ^0.6.1

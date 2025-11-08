@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'core/themes/app_theme.dart';
+import 'services/ble_service.dart';
 
 void main() {
   runApp(const ProviderScope(child: MetabolicHealthApp()));
+  BleService().startScan();
 }
 
 class MetabolicHealthApp extends StatelessWidget {
