@@ -60,7 +60,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # Charts and Graphs
-  fl_chart: ^0.65.0
+  fl_chart: ^0.66.0
   
   # Form Validation
   formz: ^0.6.1
