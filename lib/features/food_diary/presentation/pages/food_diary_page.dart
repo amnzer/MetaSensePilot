@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/themes/app_theme.dart';
 import '../widgets/macro_bars_widget.dart';
+import '../widgets/time_grouped_entry_card.dart';
 
 @RoutePage()
 class FoodDiaryPage extends StatefulWidget {
@@ -17,89 +18,151 @@ class _FoodDiaryPageState extends State<FoodDiaryPage>
   late TabController _tabController;
   DateTime _selectedDate = DateTime.now();
 
-  // Sample data - in real app this would come from state management
-  final double _carbsConsumed = 15.0;
-  final double _proteinConsumed = 85.0;
-  final double _fatConsumed = 120.0;
-  final double _carbsLimit = 20.0; // Changed to limit for carbs
-  final double _proteinGoal = 100.0; // Changed to goal for protein
-  final double _fatGoal = 150.0; // Changed to goal for fat
+  // TO DO: change sample data to actual data thru state management or api
+  final double _carbsLimit = 20.0; 
+  final double _proteinGoal = 100.0; 
+  final double _fatGoal = 150.0; 
 
-  // Updated to use DateTime timestamps for chronological ordering
-  final List<_FoodEntryData> _todaysEntries = [
-    _FoodEntryData(
-      name: 'Avocado',
-      carbs: 4.0,
-      protein: 2.0,
-      fat: 15.0,
-      calories: 160,
+  // TO DO: food entries with timestamps to be replaced with actual data
+  List<({FoodItem food, DateTime timestamp})> _foodEntries = [
+    (
+      food: const FoodItem(
+        name: 'Avocado',
+        carbs: 4.0,
+        protein: 2.0,
+        fat: 15.0,
+        calories: 160,
+        servingSize: '1 medium',
+      ),
       timestamp: DateTime.now().copyWith(hour: 8, minute: 30, second: 0),
-      servingSize: '1 medium',
     ),
-    _FoodEntryData(
-      name: 'Eggs (2 large)',
-      carbs: 1.0,
-      protein: 12.0,
-      fat: 10.0,
-      calories: 140,
+    (
+      food: const FoodItem(
+        name: 'Eggs (2 large)',
+        carbs: 1.0,
+        protein: 12.0,
+        fat: 10.0,
+        calories: 140,
+        servingSize: '2 large',
+      ),
       timestamp: DateTime.now().copyWith(hour: 8, minute: 35, second: 0),
-      servingSize: '2 large',
     ),
-    _FoodEntryData(
-      name: 'Chicken Breast',
-      carbs: 0.0,
-      protein: 54.0,
-      fat: 3.0,
-      calories: 231,
+    (
+      food: const FoodItem(
+        name: 'Chicken Breast',
+        carbs: 0.0,
+        protein: 54.0,
+        fat: 3.0,
+        calories: 231,
+        servingSize: '200g',
+      ),
       timestamp: DateTime.now().copyWith(hour: 12, minute: 30, second: 0),
-      servingSize: '200g',
     ),
-    _FoodEntryData(
-      name: 'Olive Oil',
-      carbs: 0.0,
-      protein: 0.0,
-      fat: 14.0,
-      calories: 120,
+    (
+      food: const FoodItem(
+        name: 'Olive Oil',
+        carbs: 0.0,
+        protein: 0.0,
+        fat: 14.0,
+        calories: 120,
+        servingSize: '1 tbsp',
+      ),
       timestamp: DateTime.now().copyWith(hour: 12, minute: 32, second: 0),
-      servingSize: '1 tbsp',
     ),
-    _FoodEntryData(
-      name: 'Spinach Salad',
-      carbs: 3.0,
-      protein: 3.0,
-      fat: 0.0,
-      calories: 23,
+    (
+      food: const FoodItem(
+        name: 'Spinach Salad',
+        carbs: 3.0,
+        protein: 3.0,
+        fat: 0.0,
+        calories: 23,
+        servingSize: '2 cups',
+      ),
       timestamp: DateTime.now().copyWith(hour: 12, minute: 35, second: 0),
-      servingSize: '2 cups',
     ),
-    _FoodEntryData(
-      name: 'Almonds',
-      carbs: 6.0,
-      protein: 14.0,
-      fat: 37.0,
-      calories: 413,
+    (
+      food: const FoodItem(
+        name: 'Almonds',
+        carbs: 6.0,
+        protein: 14.0,
+        fat: 37.0,
+        calories: 413,
+        servingSize: '30g',
+      ),
       timestamp: DateTime.now().copyWith(hour: 15, minute: 0, second: 0),
-      servingSize: '30g',
     ),
-    _FoodEntryData(
-      name: 'Salmon',
-      carbs: 0.0,
-      protein: 25.0,
-      fat: 12.0,
-      calories: 208,
+    (
+      food: const FoodItem(
+        name: 'Salmon',
+        carbs: 0.0,
+        protein: 25.0,
+        fat: 12.0,
+        calories: 208,
+        servingSize: '150g',
+      ),
       timestamp: DateTime.now().copyWith(hour: 19, minute: 0, second: 0),
-      servingSize: '150g',
     ),
-    _FoodEntryData(
-      name: 'Broccoli',
-      carbs: 6.0,
-      protein: 3.0,
-      fat: 0.0,
-      calories: 34,
+    (
+      food: const FoodItem(
+        name: 'Broccoli',
+        carbs: 6.0,
+        protein: 3.0,
+        fat: 0.0,
+        calories: 34,
+        servingSize: '1 cup',
+      ),
       timestamp: DateTime.now().copyWith(hour: 19, minute: 5, second: 0),
-      servingSize: '1 cup',
     ),
   ];
+
+  // TO DO: biomarker entries with timestamps to be replaced with actual data
+  final List<({BiomarkerValue biomarker, DateTime timestamp})> _biomarkerEntries = [
+    (
+      biomarker: const BiomarkerValue(
+        label: 'Glucose',
+        value: 85.0,
+        unit: 'mg/dL',
+        color: Colors.orange,
+      ),
+      timestamp: DateTime.now().copyWith(hour: 8, minute: 30, second: 0),
+    ),
+    (
+      biomarker: const BiomarkerValue(
+        label: 'Ketones',
+        value: 1.2,
+        unit: 'mmol/L',
+        color: Colors.purple,
+      ),
+      timestamp: DateTime.now().copyWith(hour: 8, minute: 30, second: 0),
+    ),
+    (
+      biomarker: const BiomarkerValue(
+        label: 'Glucose',
+        value: 95.0,
+        unit: 'mg/dL',
+        color: Colors.orange,
+      ),
+      timestamp: DateTime.now().copyWith(hour: 12, minute: 30, second: 0),
+    ),
+    (
+      biomarker: const BiomarkerValue(
+        label: 'Ketones',
+        value: 1.1,
+        unit: 'mmol/L',
+        color: Colors.purple,
+      ),
+      timestamp: DateTime.now().copyWith(hour: 12, minute: 32, second: 0),
+    ),
+  ];
+
+  // Get grouped entries by time
+  List<TimeGroupedEntry> get _groupedEntries {
+    return groupFoodsByTimeWithTimestamps(
+      foodEntries: _foodEntries,
+      biomarkerEntries: _biomarkerEntries,
+      timeWindowMinutes: 15,
+    );
+  }
 
   @override
   void initState() {
@@ -152,18 +215,18 @@ class _FoodDiaryPageState extends State<FoodDiaryPage>
   }
 
   Widget _buildTodayTab() {
-    // Sort entries chronologically
-    final sortedEntries = [..._todaysEntries]
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final totalCarbs = _groupedEntries.fold(0.0, (sum, entry) => sum + entry.totalCarbs);
+    final totalProtein = _groupedEntries.fold(0.0, (sum, entry) => sum + entry.totalProtein);
+    final totalFat = _groupedEntries.fold(0.0, (sum, entry) => sum + entry.totalFat);
 
     return SingleChildScrollView(
       child: Column(
         children: [
           _buildDateSelector(),
           MacroBarsWidget(
-            carbsGrams: _carbsConsumed,
-            proteinGrams: _proteinConsumed,
-            fatGrams: _fatConsumed,
+            carbsGrams: totalCarbs,
+            proteinGrams: totalProtein,
+            fatGrams: totalFat,
             carbsLimit: _carbsLimit,
             proteinGoal: _proteinGoal,
             fatGoal: _fatGoal,
@@ -171,7 +234,7 @@ class _FoodDiaryPageState extends State<FoodDiaryPage>
           _buildMacroSummary(),
           _buildQuickAddSection(),
           _buildTimelineHeader(),
-          _buildFoodTimeline(sortedEntries),
+          _buildTimeGroupedEntries(),
         ],
       ),
     );
@@ -252,11 +315,9 @@ class _FoodDiaryPageState extends State<FoodDiaryPage>
   }
 
   Widget _buildMacroSummary() {
-    double totalCalories = _todaysEntries.fold(
-      0,
-      (sum, entry) => sum + entry.calories,
-    );
-    double netCarbs = _carbsConsumed - 8.0; // Assuming 8g fiber
+    final totalCalories = _groupedEntries.fold(0.0, (sum, entry) => sum + entry.totalCalories);
+    final totalCarbs = _groupedEntries.fold(0.0, (sum, entry) => sum + entry.totalCarbs);
+    final netCarbs = totalCarbs - 8.0; // Assuming 8g fiber
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -390,7 +451,7 @@ class _FoodDiaryPageState extends State<FoodDiaryPage>
           ),
           const Spacer(),
           Text(
-            '${_todaysEntries.length} entries',
+            '${_foodEntries.length} entries',
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondaryColor),
@@ -400,8 +461,10 @@ class _FoodDiaryPageState extends State<FoodDiaryPage>
     );
   }
 
-  Widget _buildFoodTimeline(List<_FoodEntryData> sortedEntries) {
-    if (sortedEntries.isEmpty) {
+  Widget _buildTimeGroupedEntries() {
+    final groupedEntries = _groupedEntries;
+
+    if (groupedEntries.isEmpty) {
       return Container(
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(32),
@@ -434,192 +497,12 @@ class _FoodDiaryPageState extends State<FoodDiaryPage>
     }
 
     return Column(
-      children: sortedEntries.asMap().entries.map((entry) {
-        final index = entry.key;
-        final foodEntry = entry.value;
-        final isLast = index == sortedEntries.length - 1;
-
-        return _buildTimelineEntry(foodEntry, isLast);
+      children: groupedEntries.map((entry) {
+        return TimeGroupedEntryCard(
+          entry: entry,
+          onEditFood: (food, time) => _editFoodItem(food, time),
+        );
       }).toList(),
-    );
-  }
-
-  Widget _buildTimelineEntry(_FoodEntryData entry, bool isLast) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Timeline indicator
-          Column(
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor.withOpacity(0.3),
-                      spreadRadius: 2,
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-              ),
-              if (!isLast)
-                Container(width: 2, height: 80, color: Colors.grey.shade300),
-            ],
-          ),
-          const SizedBox(width: 16),
-          // Food entry content
-          Expanded(
-            child: Container(
-              margin: EdgeInsets.only(bottom: isLast ? 16 : 8),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
-                    spreadRadius: 1,
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: _buildTimelineEntryContent(entry),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineEntryContent(_FoodEntryData entry) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Time and food name
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                DateFormat('h:mm a').format(entry.timestamp),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.name,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  if (entry.servingSize.isNotEmpty)
-                    Text(
-                      entry.servingSize,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.7),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 20),
-              onPressed: () => _editFoodEntry(entry),
-              constraints: const BoxConstraints(),
-              padding: const EdgeInsets.all(4),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        // Macro information
-        Row(
-          children: [
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildMacroChip('C', entry.carbs, Colors.orange),
-                  _buildMacroChip('P', entry.protein, Colors.blue),
-                  _buildMacroChip('F', entry.fat, Colors.green),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '${entry.calories.toStringAsFixed(0)}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-                Text(
-                  'cal',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textSecondaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMacroChip(String label, double value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            '${value.toStringAsFixed(0)}g',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -707,33 +590,216 @@ class _FoodDiaryPageState extends State<FoodDiaryPage>
     }
   }
 
-  void _editFoodEntry(_FoodEntryData entry) {
-    // TODO: Implement edit food entry
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit ${entry.name} coming soon!'),
-        backgroundColor: AppTheme.infoColor,
+  Future<void> _editFoodItem(FoodItem food, DateTime time) async {
+    final result = await showDialog<FoodItem>(
+      context: context,
+      builder: (context) => _EditFoodItemDialog(
+        initialFood: food,
+        initialTime: time,
       ),
+    );
+
+    if (result != null) {
+      setState(() {
+        // can change time window
+        final timeWindowMinutes = 15;
+        final windowStart = _getTimeWindowStart(time, timeWindowMinutes);
+        
+        final index = _foodEntries.indexWhere(
+          (entry) {
+            final entryWindowStart = _getTimeWindowStart(entry.timestamp, timeWindowMinutes);
+            return entry.food.name == food.name &&
+                   entry.food.carbs == food.carbs &&
+                   entry.food.protein == food.protein &&
+                   entry.food.fat == food.fat &&
+                   entry.food.calories == food.calories &&
+                   entryWindowStart == windowStart;
+          },
+        );
+        
+        if (index != -1) {
+          _foodEntries[index] = (food: result, timestamp: _foodEntries[index].timestamp);
+        }
+      });
+    }
+  }
+
+  DateTime _getTimeWindowStart(DateTime timestamp, int windowMinutes) {
+    final minutes = timestamp.minute;
+    final windowStartMinute = (minutes ~/ windowMinutes) * windowMinutes;
+    return DateTime(
+      timestamp.year,
+      timestamp.month,
+      timestamp.day,
+      timestamp.hour,
+      windowStartMinute,
+      0,
     );
   }
 }
 
-class _FoodEntryData {
-  final String name;
-  final double carbs;
-  final double protein;
-  final double fat;
-  final double calories;
-  final DateTime timestamp;
-  final String servingSize;
+class _EditFoodItemDialog extends StatefulWidget {
+  final FoodItem initialFood;
+  final DateTime initialTime;
 
-  _FoodEntryData({
-    required this.name,
-    required this.carbs,
-    required this.protein,
-    required this.fat,
-    required this.calories,
-    required this.timestamp,
-    required this.servingSize,
+  const _EditFoodItemDialog({
+    required this.initialFood,
+    required this.initialTime,
   });
+
+  @override
+  State<_EditFoodItemDialog> createState() => _EditFoodItemDialogState();
+}
+
+class _EditFoodItemDialogState extends State<_EditFoodItemDialog> {
+  late TextEditingController _nameController;
+  late TextEditingController _servingSizeController;
+  late TextEditingController _carbsController;
+  late TextEditingController _proteinController;
+  late TextEditingController _fatController;
+  late TextEditingController _caloriesController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialFood.name);
+    _servingSizeController = TextEditingController(text: widget.initialFood.servingSize);
+    _carbsController = TextEditingController(text: widget.initialFood.carbs.toStringAsFixed(1));
+    _proteinController = TextEditingController(text: widget.initialFood.protein.toStringAsFixed(1));
+    _fatController = TextEditingController(text: widget.initialFood.fat.toStringAsFixed(1));
+    _caloriesController = TextEditingController(text: widget.initialFood.calories.toStringAsFixed(0));
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _servingSizeController.dispose();
+    _carbsController.dispose();
+    _proteinController.dispose();
+    _fatController.dispose();
+    _caloriesController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Food name is required')),
+      );
+      return;
+    }
+
+    final carbs = double.tryParse(_carbsController.text) ?? 0.0;
+    final protein = double.tryParse(_proteinController.text) ?? 0.0;
+    final fat = double.tryParse(_fatController.text) ?? 0.0;
+    final calories = double.tryParse(_caloriesController.text) ?? 0.0;
+
+    final updatedFood = FoodItem(
+      name: name,
+      servingSize: _servingSizeController.text.trim(),
+      carbs: carbs,
+      protein: protein,
+      fat: fat,
+      calories: calories,
+    );
+
+    Navigator.of(context).pop(updatedFood);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Food Item'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Food Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _servingSizeController,
+              decoration: const InputDecoration(
+                labelText: 'Serving Size',
+                border: OutlineInputBorder(),
+                hintText: 'e.g., 1 cup, 100g',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _carbsController,
+                    decoration: const InputDecoration(
+                      labelText: 'Carbs (g)',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _proteinController,
+                    decoration: const InputDecoration(
+                      labelText: 'Protein (g)',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _fatController,
+                    decoration: const InputDecoration(
+                      labelText: 'Fat (g)',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _caloriesController,
+                    decoration: const InputDecoration(
+                      labelText: 'Calories',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _save,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
 }

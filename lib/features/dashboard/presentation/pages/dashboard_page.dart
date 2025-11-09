@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/themes/app_theme.dart';
 import '../../../../shared/widgets/app_drawer.dart';
 import '../../../food_diary/presentation/widgets/macro_bars_widget.dart';
+import '../widgets/educational_tip_widget.dart';
 import '../widgets/molecule_bars_widget.dart';
 import '../widgets/swipeable_section_widget.dart';
 import '../widgets/weekly_nutrition_widget.dart';
@@ -58,6 +59,8 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Column(
             children: [
               _buildWelcomeSection(),
+              const EducationalTipWidget(),
+              const SizedBox(height: 8),
               _buildGlucoseKetoneChart(),
               _buildGkiCard(),
               _buildQuickActionsGrid(),
@@ -186,21 +189,21 @@ Widget _buildGlucoseKetoneChart() {
   final List<FlSpot> chartData = isGlucose ? glucoseData : ketoneData;
   const double dotSize = 4.5;
 
-  // Calculate min/max for Y-axis
+
   double yMin = chartData.map((spot) => spot.y).reduce((a, b) => a < b ? a : b);
   double yMax = chartData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
   
-  // Add padding to Y-axis range (10% on each side)
+ 
   double yRange = yMax - yMin;
-  if (yRange == 0) yRange = isGlucose ? 20 : 0.5; // Handle case where all values are the same
+  if (yRange == 0) yRange = isGlucose ? 20 : 0.5; 
   yMin = (yMin - yRange * 0.1).clamp(0, double.infinity);
   yMax = yMax + yRange * 0.1;
   
-  // Calculate nice interval for Y-axis (round to nice numbers)
+  
   double yRangeWithPadding = yMax - yMin;
-  double yInterval = yRangeWithPadding / 4; // Target 4-5 labels
+  double yInterval = yRangeWithPadding / 4; 
   if (isGlucose) {
-    // Round to nearest 5 or 10
+    
     if (yInterval < 5) {
       yInterval = 5;
     } else if (yInterval < 10) {
@@ -209,7 +212,7 @@ Widget _buildGlucoseKetoneChart() {
       yInterval = (yInterval / 10).ceilToDouble() * 10;
     }
   } else {
-    // Round to nearest 0.1, 0.2, or 0.5
+    
     if (yInterval < 0.1) {
       yInterval = 0.1;
     } else if (yInterval < 0.2) {
@@ -221,19 +224,19 @@ Widget _buildGlucoseKetoneChart() {
     }
   }
 
-  // Calculate min/max for X-axis
+  
   double xMin = chartData.map((spot) => spot.x).reduce((a, b) => a < b ? a : b);
   double xMax = chartData.map((spot) => spot.x).reduce((a, b) => a > b ? a : b);
   
-  // Add padding to X-axis range
+  
   double xRange = xMax - xMin;
-  if (xRange == 0) xRange = 3; // Handle case where all values are the same
+  if (xRange == 0) xRange = 3; 
   xMin = (xMin - xRange * 0.1).clamp(0, double.infinity);
   xMax = xMax + xRange * 0.1;
   
-  // Calculate nice interval for X-axis
+  
   double xRangeWithPadding = xMax - xMin;
-  double xInterval = xRangeWithPadding / 4; // Target 4-5 labels
+  double xInterval = xRangeWithPadding / 4; 
   xInterval = xInterval.ceilToDouble().clamp(1, double.infinity);
 
   return Card(
@@ -327,7 +330,7 @@ Widget _buildGlucoseKetoneChart() {
                       reservedSize: 36,
                       interval: yInterval,
                       getTitlesWidget: (value, meta) {
-                        // Don't show labels at exact min/max to avoid duplicates
+                        
                         const double epsilon = 0.001;
                         if (value < yMin || value > yMax || 
                             (value - yMin).abs() < epsilon || 
@@ -351,7 +354,7 @@ Widget _buildGlucoseKetoneChart() {
                       reservedSize: 28,
                       interval: xInterval,
                       getTitlesWidget: (value, meta) {
-                        // Don't show labels at exact min/max to avoid duplicates
+                        
                         const double epsilon = 0.001;
                         if (value < xMin || value > xMax || 
                             (value - xMin).abs() < epsilon || 
