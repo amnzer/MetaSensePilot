@@ -2,7 +2,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_constants.dart';
 import '../../../../core/themes/app_theme.dart';
 import '../../../../shared/widgets/app_drawer.dart';
 import '../../../food_diary/presentation/widgets/macro_bars_widget.dart';
@@ -187,6 +186,56 @@ Widget _buildGlucoseKetoneChart() {
   final List<FlSpot> chartData = isGlucose ? glucoseData : ketoneData;
   const double dotSize = 4.5;
 
+  // Calculate min/max for Y-axis
+  double yMin = chartData.map((spot) => spot.y).reduce((a, b) => a < b ? a : b);
+  double yMax = chartData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
+  
+  // Add padding to Y-axis range (10% on each side)
+  double yRange = yMax - yMin;
+  if (yRange == 0) yRange = isGlucose ? 20 : 0.5; // Handle case where all values are the same
+  yMin = (yMin - yRange * 0.1).clamp(0, double.infinity);
+  yMax = yMax + yRange * 0.1;
+  
+  // Calculate nice interval for Y-axis (round to nice numbers)
+  double yRangeWithPadding = yMax - yMin;
+  double yInterval = yRangeWithPadding / 4; // Target 4-5 labels
+  if (isGlucose) {
+    // Round to nearest 5 or 10
+    if (yInterval < 5) {
+      yInterval = 5;
+    } else if (yInterval < 10) {
+      yInterval = 10;
+    } else {
+      yInterval = (yInterval / 10).ceilToDouble() * 10;
+    }
+  } else {
+    // Round to nearest 0.1, 0.2, or 0.5
+    if (yInterval < 0.1) {
+      yInterval = 0.1;
+    } else if (yInterval < 0.2) {
+      yInterval = 0.2;
+    } else if (yInterval < 0.5) {
+      yInterval = 0.5;
+    } else {
+      yInterval = (yInterval * 2).ceilToDouble() / 2;
+    }
+  }
+
+  // Calculate min/max for X-axis
+  double xMin = chartData.map((spot) => spot.x).reduce((a, b) => a < b ? a : b);
+  double xMax = chartData.map((spot) => spot.x).reduce((a, b) => a > b ? a : b);
+  
+  // Add padding to X-axis range
+  double xRange = xMax - xMin;
+  if (xRange == 0) xRange = 3; // Handle case where all values are the same
+  xMin = (xMin - xRange * 0.1).clamp(0, double.infinity);
+  xMax = xMax + xRange * 0.1;
+  
+  // Calculate nice interval for X-axis
+  double xRangeWithPadding = xMax - xMin;
+  double xInterval = xRangeWithPadding / 4; // Target 4-5 labels
+  xInterval = xInterval.ceilToDouble().clamp(1, double.infinity);
+
   return Card(
     margin: const EdgeInsets.all(16),
     child: Padding(
@@ -243,6 +292,10 @@ Widget _buildGlucoseKetoneChart() {
             height: 220,
             child: LineChart(
               LineChartData(
+                minX: xMin,
+                maxX: xMax,
+                minY: yMin,
+                maxY: yMax,
                 lineBarsData: [
                   LineChartBarData(
                     spots: chartData,
@@ -272,10 +325,22 @@ Widget _buildGlucoseKetoneChart() {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 36,
-                      getTitlesWidget: (value, meta) => Text(
-                        value.toInt().toString(),
-                        style: const TextStyle(fontSize: 12),
-                      ),
+                      interval: yInterval,
+                      getTitlesWidget: (value, meta) {
+                        // Don't show labels at exact min/max to avoid duplicates
+                        const double epsilon = 0.001;
+                        if (value < yMin || value > yMax || 
+                            (value - yMin).abs() < epsilon || 
+                            (value - yMax).abs() < epsilon) {
+                          return const Text('');
+                        }
+                        return Text(
+                          isGlucose 
+                            ? value.toInt().toString()
+                            : value.toStringAsFixed(1),
+                          style: const TextStyle(fontSize: 12),
+                        );
+                      },
                     ),
                   ),
                   bottomTitles: AxisTitles(
@@ -284,13 +349,23 @@ Widget _buildGlucoseKetoneChart() {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 28,
-                      getTitlesWidget: (value, meta) => Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          value.toInt().toString(),
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
+                      interval: xInterval,
+                      getTitlesWidget: (value, meta) {
+                        // Don't show labels at exact min/max to avoid duplicates
+                        const double epsilon = 0.001;
+                        if (value < xMin || value > xMax || 
+                            (value - xMin).abs() < epsilon || 
+                            (value - xMax).abs() < epsilon) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        );
+                      },
                     ),
                   ),
                   topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
