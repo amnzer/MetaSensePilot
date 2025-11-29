@@ -48,7 +48,7 @@ dependencies:
   
   # Storage
   shared_preferences: ^2.2.2
-  sqflite: ^2.3.0
+  sqflite: ^2.4.2
   
   # Networking
   dio: ^5.4.0
@@ -76,6 +76,7 @@ dependencies:
   
   # Permissions
   permission_handler: ^11.1.0
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:

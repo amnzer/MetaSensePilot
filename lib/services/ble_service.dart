@@ -1,75 +1,101 @@
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'dart:typed_data';
+import '../core/constants/ble_constants.dart';
+import '../core/constants/database_lib.dart';
 
 class BleService {
   static final BleService _instance = BleService._internal();
   factory BleService() => _instance;
   BleService._internal();
   List<double> glucoseReadings = [];
-  final Set<DeviceIdentifier> _nobodyGaf = {};
+  //final Set<DeviceIdentifier> _nobodyGaf = {};
   var myUuid = Guid("1801");
   int companyId = 0x02FF;
+
+  
   void startScan() async {
-    await FlutterBluePlus.adapterState.where((val) => val == BluetoothAdapterState.on).first;
+    var currentState = await FlutterBluePlus.adapterState.first;
+    print("Current adapter state: $currentState");
+
+    await FlutterBluePlus.adapterState
+    .where((val) => val == BluetoothAdapterState.on).first;
+
     print("Starting BLE scan...");
-    FlutterBluePlus.startScan(timeout: Duration(seconds: 5));
+    FlutterBluePlus.startScan(); // no timeout now
+
     FlutterBluePlus.scanResults.listen((results) {
       for (var r in results) {
-        if (!_nobodyGaf.contains(r.device.remoteId)){
-          //print("  Connectable: ${adv.connectable}");
-          //print("  Service UUIDs: ${adv.serviceUuids}");
-          // firstly check if it's metameta
-          var adv = r.advertisementData;
-          //if (!adv.serviceUuids.contains(myUuid)) {
-          //  _nobodyGaf.add(r.device.remoteId); // not metasense
-          //  continue;
-          //}
-          // if metameta (or, if anything)
-          if (r.device.advName.contains("Meta")){
-            print("Device: ${r.device.advName} (${r.device.remoteId})");
-            //print("Device found: ${r.device.advName} (${r.device.remoteId})");
-            print("  RSSI: ${r.rssi}");
-            //print("uuids${adv.serviceUuids}");       // contains your UUID
-            //print("service data${adv.serviceData}"); 
-            var mdata = adv.manufacturerData;
-            print("Manufacturer Data: ${adv.manufacturerData}");
-            if (mdata.containsKey(companyId)) {
-              List<int> bytes = mdata[companyId]!; // get raw byte array
-              if (bytes.length >= 4) {
-                print(bytes);
-                var floatval = decodeBytes(bytes);
-                print("Received this value: $floatval");
-                // convert first 4 bytes to float
+        var adv = r.advertisementData;
+        if (r.device.advName.contains("Meta")){
+          // prints
+          //print("Device: ${r.device.advName} (${r.device.remoteId})");
+          //print("  RSSI: ${r.rssi}");
+          //print("Manufacturer Data: ${adv.manufacturerData}");
+          
+          // decode
+          var mdata = adv.manufacturerData;
+          if (mdata.containsKey(companyId)) {
+            List<int> bytes = mdata[companyId]!; // get raw byte array
+            if (bytes.length >= 4) { // this is basically implied
+              //print(bytes);
+              var data = decodeBytes(bytes);
+              if (data.isNotEmpty){
+                print("Decoded transmission: $data");
+                DBUtils.insertRow(data); // write to db!
+                //print("Wrote to db!");
               }
+              
             }
-        
-            //var byteStream = adv.serviceData[myUuid];
-            //print("Byte stream len: ${byteStream?.length}");
-            //if (byteStream != null && byteStream.length >= 4) {
-            //  print("Got valid bytes from Meta device.");
-            //}
-            //else{
-            //  print("Invalid byte stream from Meta device.");
-            //}
-            print(" "); // \n getting ignored
-          //print("  Manufacturer Data: ${adv.manufacturerData}");
           }
-      } 
+          print(" "); // \n getting ignored
+        }
       }
     });
   }
-  Map<String, num> decodeBytes(List<int> sensorbytes){
 
-    // it is known that bytes will be at least 4 long. 
-    // here's the current way to encode.
-    final glucoseBytes = sensorbytes.sublist(0, 4);
-    final bytes = Uint8List.fromList(glucoseBytes);
-    final byteData = ByteData.sublistView(bytes);
-    double glucoseValue = byteData.getFloat32(0,Endian.little);
-    
-    var allSensorData = {"glucose": glucoseValue};
-    
-    return allSensorData;
-    
+  Map<String, num> decodeBytes(List<int> sensorbytes){
+    // get uniqueness identifiers
+    final chpg = sensorbytes[0];
+    final chapter = (chpg>>4)&0x0F;
+    final page = chpg&0x0F;
+    // reset  
+    if (chapter != BLE.lastTransmissionNum){
+      BLE.lastTransmissionNum = chapter;
+      BLE.pages = {};
+    }
+    // get data
+    if (!BLE.pages.contains(page)){
+      // extraction and conversion
+      final sensor1raw = sensorbytes.sublist(1, 5);
+      final sensor2raw = sensorbytes.sublist(5, 9);
+      final sensor3raw = sensorbytes.sublist(9, 13);
+      final sensor4raw = sensorbytes.sublist(13,17);
+
+      final sensor1bytes = Uint8List.fromList(sensor1raw);
+      final sensor2bytes = Uint8List.fromList(sensor2raw);
+      final sensor3bytes = Uint8List.fromList(sensor3raw);
+      final sensor4bytes = Uint8List.fromList(sensor4raw);
+
+      final sensor1data = ByteData.sublistView(sensor1bytes).getFloat32(0,Endian.little); 
+      final sensor2data = ByteData.sublistView(sensor2bytes).getFloat32(0,Endian.little);
+      final sensor3data = ByteData.sublistView(sensor3bytes).getFloat32(0,Endian.little);
+      final sensor4data = ByteData.sublistView(sensor4bytes).getFloat32(0,Endian.little);
+
+      final sensorDatas = [sensor1data, sensor2data, sensor3data, sensor4data];
+      
+      // write
+      Map<String,num> allSensorData = {"timestamp": DateTime.now().millisecondsSinceEpoch,"page":page};
+
+      for (var i=0; i<4; i++){
+        if (sensorDatas[i]!=0){
+          allSensorData[DBUtils.columnNames[i+2]] = sensorDatas[i]; // first 2 cols are timestamp and page
+        }
+      }
+      // only have non-zero readings
+      //print(sensor1data);
+      BLE.pages.add(page);
+      return allSensorData;
+    }
+    return {};
   }
 }
