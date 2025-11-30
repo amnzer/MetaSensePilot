@@ -50,6 +50,10 @@ class _DashboardPageState extends State<DashboardPage> {
           final latest = data.last; 
           _latestGlucose = latest['sensor1'] != null ? (latest['sensor1'] as num).toDouble() : null;
           _latestKetones = latest['sensor2'] != null ? (latest['sensor2'] as num).toDouble() : null;
+        } else {
+          // reset to null when no data so fallback values are used
+          _latestGlucose = null;
+          _latestKetones = null;
         }
       });
     } catch (e) {

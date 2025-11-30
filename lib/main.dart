@@ -12,7 +12,7 @@ void main() async {
   runApp(const ProviderScope(child: MetabolicHealthApp()));
   // make db
   var db = await DBUtils.db;
-  //DBUtils.deleteDB();
+  // DBUtils.deleteDB(); 
   //DBUtils.printDBs();
   DBUtils.printDBEntries(db, desc: false);
   // run services
