@@ -158,7 +158,7 @@ class _SwipeableSectionWidgetState extends State<SwipeableSectionWidget>
   }
 
   Widget _buildPageContent(Widget child) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: double.infinity,
       child: child,

@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/themes/app_theme.dart';
+import '../../../../core/constants/database_lib.dart';
 import '../../../../shared/widgets/app_drawer.dart';
 import '../../../food_diary/presentation/widgets/macro_bars_widget.dart';
 import '../widgets/educational_tip_widget.dart';
@@ -27,6 +28,36 @@ class _DashboardPageState extends State<DashboardPage> {
   final List<String> _metricOptions = ['Glucose', 'Ketones'];
   final List<String> _rangeOptions = ['Day', 'Week', 'Month'];
 
+  // sensor data
+  List<Map<String, dynamic>> _sensorData = [];
+  double? _latestGlucose;
+  double? _latestKetones;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final data = await DBUtils.getTodaySensorData();
+      setState(() {
+        _sensorData = data;
+        
+        // get latest values for GKI
+        if (data.isNotEmpty) {
+          final latest = data.last; 
+          _latestGlucose = latest['sensor1'] != null ? (latest['sensor1'] as num).toDouble() : null;
+          _latestKetones = latest['sensor2'] != null ? (latest['sensor2'] as num).toDouble() : null;
+        }
+      });
+    } catch (e) {
+      // empty data if error
+      print('Error loading data: $e');
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -50,10 +81,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       drawer: const AppDrawer(),
       body: RefreshIndicator(
-        onRefresh: () async {
-          // TODO: Refresh data
-          await Future.delayed(const Duration(seconds: 1));
-        },
+        onRefresh: _loadData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
@@ -171,22 +199,33 @@ Widget _buildGlucoseKetoneChart() {
   final bool isGlucose = _selectedMetric == 'Glucose';
   final String yAxisLabel = isGlucose ? 'mg/dL' : 'mmol/L';
 
-  // TO DO: replace dummy data w real sensor data
-  final List<FlSpot> glucoseData = [
-    const FlSpot(0, 85),
-    const FlSpot(1, 90),
-    const FlSpot(2, 80),
-    const FlSpot(3, 95),
-  ];
-
-  final List<FlSpot> ketoneData = [
-    const FlSpot(0, 1.2),
-    const FlSpot(1, 1.1),
-    const FlSpot(2, 1.4),
-    const FlSpot(3, 1.0),
-  ];
-
-  final List<FlSpot> chartData = isGlucose ? glucoseData : ketoneData;
+  List<FlSpot> chartData = [];
+  
+  if (_sensorData.isNotEmpty) {
+    final sensorColumn = isGlucose ? 'sensor1' : 'sensor2';
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    
+    chartData = _sensorData.asMap().entries.map((entry) {
+      final index = entry.key;
+      final row = entry.value;
+      final value = row[sensorColumn];
+      
+      if (value != null) {
+        final timestamp = DateTime.fromMillisecondsSinceEpoch(row['timestamp'] as int);
+        final hoursSinceStart = timestamp.difference(startOfDay).inHours.toDouble();
+        return FlSpot(hoursSinceStart, (value as num).toDouble());
+      }
+      return FlSpot(index.toDouble(), 0);
+    }).where((spot) => spot.y > 0).toList();
+  }
+  
+  // if we dont have data use dummy data
+  if (chartData.isEmpty) {
+    chartData = isGlucose
+        ? [const FlSpot(0, 85), const FlSpot(1, 90), const FlSpot(2, 80), const FlSpot(3, 95)]
+        : [const FlSpot(0, 1.2), const FlSpot(1, 1.1), const FlSpot(2, 1.4), const FlSpot(3, 1.0)];
+  }
   const double dotSize = 4.5;
 
 
@@ -504,10 +543,10 @@ Widget _buildGlucoseKetoneChart() {
   }
 
   Widget _buildGkiCard() {
-    // Mock data - in real app this would come from state management
-    const double glucose = 85.0;
-    const double ketones = 1.2;
-    const double gki = glucose / (ketones * 18.0);
+    // use dummy data if we dont have data
+    final glucose = _latestGlucose ?? 85.0;
+    final ketones = _latestKetones ?? 1.2;
+    final gki = (ketones > 0) ? glucose / (ketones * 18.0) : 0.0;
 
     Color getGkiColor() {
       if (gki <= 3.0) return AppTheme.optimalColor;
@@ -905,6 +944,42 @@ Widget _buildGlucoseKetoneChart() {
   }
 
   Widget _buildRecentReadingsSection() {
+    final recentReadings = <Map<String, dynamic>>[];
+    final groupedByTime = <int, Map<String, dynamic>>{};
+    
+    for (final row in _sensorData.reversed.take(20)) {
+      final timestamp = row['timestamp'] as int;
+      final timeKey = (timestamp / 300000).floor(); 
+      
+      if (!groupedByTime.containsKey(timeKey)) {
+        groupedByTime[timeKey] = {'timestamp': timestamp, 'glucose': null, 'ketones': null};
+      }
+      
+      if (row['sensor1'] != null) {
+        groupedByTime[timeKey]!['glucose'] = (row['sensor1'] as num).toDouble();
+      }
+      if (row['sensor2'] != null) {
+        groupedByTime[timeKey]!['ketones'] = (row['sensor2'] as num).toDouble();
+      }
+    }
+    
+    for (final entry in groupedByTime.values) {
+      final glucose = entry['glucose'] as double?;
+      final ketones = entry['ketones'] as double?;
+      
+      if (glucose != null && ketones != null && ketones > 0) {
+        recentReadings.add({
+          'timestamp': entry['timestamp'] as int,
+          'glucose': glucose,
+          'ketones': ketones,
+          'gki': glucose / (ketones * 18.0),
+        });
+      }
+    }
+    
+    recentReadings.sort((a, b) => (b['timestamp'] as int).compareTo(a['timestamp'] as int));
+    final displayReadings = recentReadings.take(5).toList();
+
     return Container(
       margin: const EdgeInsets.all(16),
       child: Column(
@@ -928,22 +1003,52 @@ Widget _buildGlucoseKetoneChart() {
             ],
           ),
           const SizedBox(height: 12),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 3,
-            itemBuilder: (context, index) {
-              return _buildRecentReadingItem(
-                time: 'Today, ${8 + index * 2}:00 AM',
-                glucose: 85 + (index * 5),
-                ketones: 1.2 - (index * 0.1),
-                gki: (85 + (index * 5)) / ((1.2 - (index * 0.1)) * 18.0),
-              );
-            },
-          ),
+          if (displayReadings.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'No recent readings available',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textSecondaryColor,
+                ),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: displayReadings.length,
+              itemBuilder: (context, index) {
+                final reading = displayReadings[index];
+                final timestamp = DateTime.fromMillisecondsSinceEpoch(reading['timestamp'] as int);
+                final timeStr = _formatReadingTime(timestamp);
+                return _buildRecentReadingItem(
+                  time: timeStr,
+                  glucose: reading['glucose'] as double,
+                  ketones: reading['ketones'] as double,
+                  gki: reading['gki'] as double,
+                );
+              },
+            ),
         ],
       ),
     );
+  }
+
+  String _formatReadingTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final readingDay = DateTime(timestamp.year, timestamp.month, timestamp.day);
+    
+    if (readingDay == today) {
+      final hour = timestamp.hour;
+      final minute = timestamp.minute.toString().padLeft(2, '0');
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+      return 'Today, $displayHour:$minute $period';
+    } else {
+      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+    }
   }
 
   Widget _buildRecentReadingItem({

@@ -91,6 +91,35 @@ class DBUtils{
     database.insert(tablename, data);
   }
 
+ // read db
+  static Future<List<Map<String, dynamic>>> getAllSensorData({int? limit, bool orderDesc = true}) async {
+    final database = await db;
+    var query = 'SELECT * FROM $tablename ORDER BY timestamp ${orderDesc ? 'DESC' : 'ASC'}';
+    if (limit != null) {
+      query += ' LIMIT $limit';
+    }
+    return await database.rawQuery(query);
+  }
+
+  // get latest sensor data
+  static Future<Map<String, dynamic>?> getLatestSensorData() async {
+    final results = await getAllSensorData(limit: 1, orderDesc: true);
+    return results.isNotEmpty ? results.first : null;
+  }
+
+  // get today's sensor data
+  static Future<List<Map<String, dynamic>>> getTodaySensorData() async {
+    final database = await db;
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final startTimestamp = startOfDay.millisecondsSinceEpoch;
+    
+    return await database.rawQuery(
+      'SELECT * FROM $tablename WHERE timestamp >= ? ORDER BY timestamp ASC',
+      [startTimestamp],
+    );
+  }
+
   // delete db
   static void deleteDB() async{
     var databasesPath = await getDatabasesPath();

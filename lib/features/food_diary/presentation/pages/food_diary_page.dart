@@ -24,7 +24,7 @@ class _FoodDiaryPageState extends State<FoodDiaryPage>
   final double _fatGoal = 150.0; 
 
   // TO DO: food entries with timestamps to be replaced with actual data
-  List<({FoodItem food, DateTime timestamp})> _foodEntries = [
+  final List<({FoodItem food, DateTime timestamp})> _foodEntries = [
     (
       food: const FoodItem(
         name: 'Avocado',
@@ -515,7 +515,7 @@ class _FoodDiaryPageState extends State<FoodDiaryPage>
     } else if (difference == 1) {
       return 'Yesterday';
     } else if (difference < 7) {
-      return '${difference} days ago';
+      return '$difference days ago';
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
