@@ -204,24 +204,32 @@ Widget _buildGlucoseKetoneChart() {
   final String yAxisLabel = isGlucose ? 'mg/dL' : 'mmol/L';
 
   List<FlSpot> chartData = [];
+  DateTime? baseTimestamp;
   
   if (_sensorData.isNotEmpty) {
     final sensorColumn = isGlucose ? 'sensor1' : 'sensor2';
-    final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day);
+    final timestamps = _sensorData
+        .map((row) => row['timestamp'])
+        .whereType<int>()
+        .toList();
+    if (timestamps.isNotEmpty) {
+      baseTimestamp = DateTime.fromMillisecondsSinceEpoch(
+        timestamps.reduce((a, b) => a < b ? a : b),
+      );
+    }
     
-    chartData = _sensorData.asMap().entries.map((entry) {
-      final index = entry.key;
-      final row = entry.value;
+    chartData = _sensorData.map((row) {
       final value = row[sensorColumn];
+      final tsMillis = row['timestamp'] as int?;
       
-      if (value != null) {
-        final timestamp = DateTime.fromMillisecondsSinceEpoch(row['timestamp'] as int);
-        final hoursSinceStart = timestamp.difference(startOfDay).inHours.toDouble();
-        return FlSpot(hoursSinceStart, (value as num).toDouble());
+      if (value != null && tsMillis != null && baseTimestamp != null) {
+        final timestamp = DateTime.fromMillisecondsSinceEpoch(tsMillis);
+        final hoursSinceBase =
+            timestamp.difference(baseTimestamp).inMilliseconds / 3600000.0;
+        return FlSpot(hoursSinceBase, (value as num).toDouble());
       }
-      return FlSpot(index.toDouble(), 0);
-    }).where((spot) => spot.y > 0).toList();
+      return null;
+    }).whereType<FlSpot>().where((spot) => spot.y > 0).toList();
   }
   
   // if we dont have data use dummy data
@@ -230,6 +238,7 @@ Widget _buildGlucoseKetoneChart() {
         ? [const FlSpot(0, 85), const FlSpot(1, 90), const FlSpot(2, 80), const FlSpot(3, 95)]
         : [const FlSpot(0, 1.2), const FlSpot(1, 1.1), const FlSpot(2, 1.4), const FlSpot(3, 1.0)];
   }
+  baseTimestamp ??= DateTime.now();
   const double dotSize = 4.5;
 
 
@@ -279,8 +288,18 @@ Widget _buildGlucoseKetoneChart() {
   
   
   double xRangeWithPadding = xMax - xMin;
-  double xInterval = xRangeWithPadding / 4; 
-  xInterval = xInterval.ceilToDouble().clamp(1, double.infinity);
+  double xInterval = xRangeWithPadding / 4;
+  if (xInterval <= 2) {
+    xInterval = 2;
+  } else if (xInterval <= 3) {
+    xInterval = 3;
+  } else if (xInterval <= 4) {
+    xInterval = 4;
+  } else if (xInterval <= 6) {
+    xInterval = 6;
+  } else {
+    xInterval = (xInterval / 6).ceilToDouble() * 6; 
+  }
 
   return Card(
     margin: const EdgeInsets.all(16),
@@ -394,21 +413,30 @@ Widget _buildGlucoseKetoneChart() {
                     axisNameSize: 22,
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: 40,
                       interval: xInterval,
                       getTitlesWidget: (value, meta) {
-                        
-                        const double epsilon = 0.001;
-                        if (value < xMin || value > xMax || 
-                            (value - xMin).abs() < epsilon || 
-                            (value - xMax).abs() < epsilon) {
+          
+                        const double epsilon = 0.1;
+                        if (value < xMin - epsilon || value > xMax + epsilon) {
                           return const SizedBox.shrink();
                         }
+                      
+                        if (baseTimestamp == null) {
+                          return const SizedBox.shrink();
+                        }
+                        
+                        final displayTime = baseTimestamp.add(
+                          Duration(
+                            minutes: (value * 60).round(),
+                          ),
+                        );
+                        
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
-                            value.toInt().toString(),
-                            style: const TextStyle(fontSize: 12),
+                            _formatChartTime(displayTime),
+                            style: const TextStyle(fontSize: 11),
                           ),
                         );
                       },
@@ -420,6 +448,52 @@ Widget _buildGlucoseKetoneChart() {
 
                 gridData: FlGridData(show: true),
                 borderData: FlBorderData(show: true),
+                lineTouchData: LineTouchData(
+                  enabled: true,
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                      return touchedSpots.map((LineBarSpot touchedSpot) {
+        
+                        if (baseTimestamp == null) {
+                          return LineTooltipItem(
+                            '${touchedSpot.y.toStringAsFixed(isGlucose ? 0 : 1)} $yAxisLabel',
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        }
+                        
+                        final displayTime = baseTimestamp.add(
+                          Duration(
+                            minutes: (touchedSpot.x * 60).round(),
+                          ),
+                        );
+                        
+                        final timeStr = _formatChartTime(displayTime);
+                        final valueStr = isGlucose 
+                            ? touchedSpot.y.toInt().toString()
+                            : touchedSpot.y.toStringAsFixed(1);
+                        
+                        return LineTooltipItem(
+                          '$timeStr\n$valueStr $yAxisLabel',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList();
+                    },
+                    tooltipBgColor: AppTheme.primaryColor.withOpacity(0.9),
+                    tooltipRoundedRadius: 8,
+                    tooltipPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  touchSpotThreshold: 50,
+                ),
               ),
             ),
           ),
@@ -1037,6 +1111,14 @@ Widget _buildGlucoseKetoneChart() {
         ],
       ),
     );
+  }
+
+  String _formatChartTime(DateTime timestamp) {
+    final hour = timestamp.hour;
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    return '$displayHour:$minute $period';
   }
 
   String _formatReadingTime(DateTime timestamp) {

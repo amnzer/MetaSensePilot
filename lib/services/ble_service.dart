@@ -40,14 +40,14 @@ class BleService {
               //print(bytes);
               var data = decodeBytes(bytes);
               if (data.isNotEmpty){
-                print("Decoded transmission: $data");
+                print("Decoded transmission: $data\n");
                 DBUtils.insertRow(data); // write to db!
                 //print("Wrote to db!");
               }
               
             }
           }
-          print(" "); // \n getting ignored
+          // print(" "); // \n getting ignored
         }
       }
     });
