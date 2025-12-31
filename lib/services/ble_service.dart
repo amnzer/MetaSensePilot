@@ -1,22 +1,32 @@
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'dart:typed_data';
+import 'dart:async';
 import '../core/constants/ble_constants.dart';
 import '../core/constants/database_lib.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 class BleService {
-  // 1. Flags + singleton setup
   static const advertEnabled = false; // 1 for advert, 0 for gatt. must be consistent w/ MCU code
-  static final scanDuration = advertEnabled ? Duration(days: 100000): Duration(minutes: 20);
+
+  // 1. Setup
+  // 1a. Singleton
   static final BleService _instance = BleService._internal();
   factory BleService() => _instance;
   BleService._internal();
-  //final Set<DeviceIdentifier> _nobodyGaf = {};
-  // 2. Helper Functions
-  // 2a. Vars
-  var sensorServiceUUID = Guid("86b00c77-f4f3-4bbc-9f35-b8b64dd27191");
-  var sensorCharacteristicUUID = Guid("af515174-df50-457d-9f08-082a4dbd8ce0");
+
+  StreamSubscription<DiscoveredDevice>? _scanSub;
+  StreamSubscription? _pipelineSub;
+  StreamSubscription<ConnectionStateUpdate>? _connSub;
+
+  // 1b. Vars
+  final FlutterReactiveBle ble = FlutterReactiveBle();
+  static final scanDuration = advertEnabled ? Duration(days: 100000): Duration(minutes: 20);
+
+  final sensorServiceUUID = Uuid.parse("86b00c77-f4f3-4bbc-9f35-b8b64dd27191");
+  final sensorCharacteristicUUID = Uuid.parse("af515174-df50-457d-9f08-082a4dbd8ce0");
   int companyId = 0x02FF;
-  // 2.b Establishing connections
+
+  // 2. Helper Functions
+  // 2a. I/O
   Future<void> saveDeviceId(String deviceId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('ble_device_id', deviceId);
@@ -26,56 +36,146 @@ class BleService {
     return prefs.getString('ble_device_id');
   }
 
+  // 2b. Decoding
+  List<int> decodeAdvertFromManufacturerData(List<int> mfgData) {
+    if (mfgData.length < 2) return [];
+    
+    final int id =mfgData[0] | (mfgData[1] << 8);
+    if (id != companyId) return [];
 
-  // 3. Decoding Functions
-  List<int> decodeAdvert(AdvertisementData adv) {
-      var mdata = adv.manufacturerData;
-      if (mdata.containsKey(companyId)) {
-        List<int> bytes = mdata[companyId]!; // raw byte array
-        return bytes;
-      }
-      return [];
+    // Return just the payload
+    return mfgData.sublist(2);
   }
-  Future<List<int>> decodeGATT(ScanResult r) async{
-    //print(r.advertisementData.serviceUuids);
-    //print(r.advertisementData.serviceUuids[0].runtimeType);
-    if (r.advertisementData.serviceUuids.contains(sensorServiceUUID)) {
-      // You found a candidate
+
+  Future<List<int>> decodeGATTFromScan(DiscoveredDevice d) async {
+    if (d.serviceUuids.contains(sensorServiceUUID)) {
       print("ok\n");
-      //print("Found: ${r.device.platformName}  id=${r.device.remoteId}\n");
+      // If you want to stop scanning once you find one:
+      await stopScan();
     }
-    var target = r.device;
-    await FlutterBluePlus.stopScan();
     return [];
   }
-  // 4. Core
-  void startScan() async {
-    var currentState = await FlutterBluePlus.adapterState.first;
-    print("Current adapter state: $currentState");
 
-    await FlutterBluePlus.adapterState
-    .where((val) => val == BluetoothAdapterState.on).first;
-
-    print("Starting BLE scan...");
-    FlutterBluePlus.startScan(); // no timeout now
-    FlutterBluePlus.scanResults.listen((results) {
-      for (var r in results) {
-        var adv = r.advertisementData;
-        if (r.device.advName.contains("Meta")){
-          //Rprint(r.device.advName);
-          var bytes = advertEnabled ? decodeAdvert(adv) : decodeGATT(r);
-          if (bytes.isNotEmpty){
-            var data = decodeBytes(bytes);
-            print("Decoded transmission: $data\n");
-             // DBUtils.insertRow(data);
-          }
-              
-          }
-          // print(" "); // \n getting ignored
-        }
-      }
-    );
+  // 2c. Connection management
+  Stream<DiscoveredDevice> scanStream({
+      required List<Uuid> withServices,
+    }) {
+      return ble.scanForDevices(
+        withServices: withServices,
+        scanMode: ScanMode.lowLatency,
+      );
   }
+
+  Future<void> startScan() async {
+    await ble.statusStream.where((s) => s == BleStatus.ready).first;
+
+    // sensorService is not advertised for adv-based comms on MCU
+    List<Uuid> services = advertEnabled ? [] : [sensorServiceUUID]; 
+    final devices = scanStream(withServices: services); // or [sensorServiceUUID]
+
+    // Pipeline: scan → filter → route by mode
+    _pipelineSub = devices.listen((d) {
+      if (advertEnabled) {
+        _handleAdvertisingDevice(d);
+      } else {
+        _handleGattDevice(d);
+      }
+    });
+  }
+  
+  Future<void> stopScan() async {
+    await _scanSub?.cancel();
+    _scanSub = null;
+    await _pipelineSub?.cancel();
+    _pipelineSub = null;
+  }
+
+  void _handleAdvertisingDevice(DiscoveredDevice d) {
+    // lightweight filter here
+    if (!d.name.contains("Meta")) return;
+
+    // decoding is fully separate and pure
+    final payload = decodeAdvertFromManufacturerData(d.manufacturerData);
+    if (payload.isEmpty){
+      print("no content in payload\n");
+      return;
+    } 
+
+    final data = decodeBytes(payload); // your function
+    print("advert decoded: $data\n");
+  }
+
+  void _handleGattDevice(DiscoveredDevice d) {
+    if (!d.name.contains("Meta")) return;
+    if (!d.serviceUuids.contains(sensorServiceUUID)) return;
+
+    // push GATT connection tasks elsewhere (don’t do long async inside scan callback)
+    _connectAndReadOnce(d.id);
+  }
+  bool _gattBusy = false;
+
+  Future<void> _connectAndReadOnce(String deviceId) async {
+    if (_gattBusy) return;
+    _gattBusy = true;
+    try {
+      final value = await connectAndReadCharacteristic(deviceId);
+      print(value);
+      final decodedInfo = decodeBytes(value.sublist(4)); // this is payload
+      print("GATT read: $decodedInfo");
+    } finally {
+      _gattBusy = false;
+    }
+  }
+  
+  // 3. GATT Handling
+  Future<List<int>> connectAndReadCharacteristic(String deviceId) async {
+  // Connection stream (we'll wait until connected)
+  final completer = Completer<void>();
+
+  _connSub = ble
+      .connectToDevice(
+        id: deviceId,
+        // This helps Reactive BLE know what to discover up-front (optional but recommended)
+        servicesWithCharacteristicsToDiscover: {
+          sensorServiceUUID: [sensorCharacteristicUUID]
+        },
+        connectionTimeout: const Duration(seconds: 15),
+      )
+      .listen((update) async {
+        if (update.connectionState == DeviceConnectionState.connected) {
+          if (!completer.isCompleted) completer.complete();
+        } else if (update.connectionState ==
+            DeviceConnectionState.disconnected) {
+          if (!completer.isCompleted) {
+            completer.completeError(Exception("Disconnected before ready"));
+          }
+        }
+      }, onError: (e) {
+        if (!completer.isCompleted) completer.completeError(e);
+      });
+
+    // Wait for connected
+    await completer.future;
+
+    // Now read the characteristic (this is where iOS will trigger pairing if required)
+    final qc = QualifiedCharacteristic(
+      deviceId: deviceId,
+      serviceId: sensorServiceUUID,
+      characteristicId: sensorCharacteristicUUID,
+    );
+
+    // iOS sometimes needs a short beat after connection/encryption;
+    // do a simple retry once (very common with encrypted characteristics)
+    try {
+      return await ble.readCharacteristic(qc);
+    } catch (_) {
+      await Future.delayed(const Duration(milliseconds: 700));
+      return await ble.readCharacteristic(qc);
+    }
+  }
+  // 4. Core
+
+      // Manufacturer data is raw bytes (includes company ID in first 2 bytes)
 
   Map<String, num> decodeBytes(List<int> sensorbytes){
     // get uniqueness identifiers
@@ -122,92 +222,4 @@ class BleService {
     }
     return {};
   }
-}
-          // prints
-          //print("Device: ${r.device.advName} (${r.device.remoteId})");
-          //print("  RSSI: ${r.rssi}");
-          //print("Manufacturer Data: ${adv.manufacturerData}");
-          
-          // decode
-
-
-          Future<T> retryOnce<T>(Future<T> Function() op) async {
-  try {
-    return await op();
-  } catch (_) {
-    await Future.delayed(const Duration(milliseconds: 700));
-    return await op();
-  }
-}
-
-Future<void> connectAndBond() async {
-  // 1) Scan + pick device advertising the service
-  BluetoothDevice? target;
-
-  final sub = FlutterBluePlus.scanResults.listen((results) async {
-    for (final r in results) {
-      if (r.advertisementData.serviceUuids.contains(sensorServiceUUID)) {
-        target = r.device;
-        await FlutterBluePlus.stopScan();
-        break;
-      }
-    }
-  });
-  
-  await FlutterBluePlus.startScan(
-    // On iOS this filter isn't always strict, but it helps.
-    withServices: [sensorServiceUUID],
-    timeout: const Duration(seconds: 10),
-  );
-  
-  await sub.cancel();
-
-  if (target == null) {
-    throw Exception("No device found advertising sensorServiceUUID");
-  }
-
-  final device = target!;
-
-  // 2) Ensure clean connection state
-  try {
-    await device.disconnect();
-  } catch (_) {}
-
-  await device.connect(
-    autoConnect: false,
-    timeout: const Duration(seconds: 15),
-  );
-
-  // 3) Discover services/characteristics
-  final services = await device.discoverServices();
-
-  final service = services.firstWhere(
-    (s) => s.uuid == sensorServiceUUID,
-    orElse: () => throw Exception("Service not found after connect"),
-  );
-
-  final ch = service.characteristics.firstWhere(
-    (c) => c.uuid == sensorCharacteristicUUID,
-    orElse: () => throw Exception("Characteristic not found after connect"),
-  );
-
-  // 4) Trigger iOS pairing/bonding:
-  //    do a protected read first (usually triggers pairing UI)
-  final bytes = await retryOnce(() => ch.read());
-  print("Secure read OK: $bytes");
-
-  // 5) Now enable notify (CCCD write may also require encryption)
-  if (!(ch.properties.notify || ch.properties.indicate)) {
-    throw Exception("Characteristic does not support notify/indicate");
-  }
-
-  await retryOnce(() => ch.setNotifyValue(true));
-  print("Notify enabled");
-
-  // 6) Listen for notifications
-  ch.lastValueStream.listen((value) {
-    print("Notify: $value");
-  });
-
-  // Optional: keep connection alive; handle disconnects in a real app
 }
