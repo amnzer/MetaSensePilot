@@ -1,4 +1,5 @@
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:intl/intl.dart';
 import 'dart:typed_data';
 import 'dart:async';
 import '../core/constants/ble_constants.dart';
@@ -102,7 +103,10 @@ class BleService {
     } 
 
     final data = decodeBytes(payload); // your function
-    print("advert decoded: $data\n");
+    if (data.isNotEmpty){ // this is not an error case btw. could just mean that the packet is duplicate
+      print("human timestamp: ${DateFormat.Hms().format(DateTime.now())}");
+      print("advert decoded: $data\n");
+    }
   }
 
   void _handleGattDevice(DiscoveredDevice d) {
@@ -119,14 +123,15 @@ class BleService {
     _gattBusy = true;
     try {
       final value = await connectAndReadCharacteristic(deviceId);
-      print(value);
+      //print(value);
       final decodedInfo = decodeBytes(value.sublist(4)); // this is payload
-      print("GATT read: $decodedInfo");
+      print("human timestamp: ${DateFormat.Hms().format(DateTime.now())}");
+      print("GATT decoded: $decodedInfo");
     } finally {
       _gattBusy = false;
     }
   }
-  
+
   // 3. GATT Handling
   Future<List<int>> connectAndReadCharacteristic(String deviceId) async {
   // Connection stream (we'll wait until connected)
@@ -174,14 +179,14 @@ class BleService {
     }
   }
   // 4. Core
-
-      // Manufacturer data is raw bytes (includes company ID in first 2 bytes)
+  // Manufacturer data is raw bytes (includes company ID in first 2 bytes)
 
   Map<String, num> decodeBytes(List<int> sensorbytes){
     // get uniqueness identifiers
     final chpg = sensorbytes[0];
     final chapter = (chpg>>4)&0x0F;
     final page = chpg&0x0F;
+    
     // reset  
     if (chapter != BLE.lastTransmissionNum){
       BLE.lastTransmissionNum = chapter;
