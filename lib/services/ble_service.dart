@@ -147,6 +147,7 @@ class BleService {
         connectionTimeout: const Duration(seconds: 15),
       )
       .listen((update) async {
+        //print("BLE state: ${update.connectionState}");
         if (update.connectionState == DeviceConnectionState.connected) {
           if (!completer.isCompleted) completer.complete();
         } else if (update.connectionState ==
