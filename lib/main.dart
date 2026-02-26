@@ -13,8 +13,8 @@ void main() async {
   // make db
   var db = await DBUtils.db;
   //DBUtils.deleteDB();
-  //DBUtils.printDBs();R
-  //DBUtils.printDBEntries(db, desc: false);
+  //DBUtils.printDBs();//R
+  DBUtils.printDBEntries(db, desc: true);
   // run services
   BleService().startScan();
 }

@@ -6,7 +6,7 @@ import '../core/constants/ble_constants.dart';
 import '../core/constants/database_lib.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 class BleService {
-  static const advertEnabled = false; // 1 for advert, 0 for gatt. must be consistent w/ MCU code
+  static const advertEnabled = true; // 1 for advert, 0 for gatt. must be consistent w/ MCU code
 
   // 1. Setup
   // 1a. Singleton
@@ -106,6 +106,7 @@ class BleService {
     if (data.isNotEmpty){ // this is not an error case btw. could just mean that the packet is duplicate
       print("human timestamp: ${DateFormat.Hms().format(DateTime.now())}");
       print("advert decoded: $data\n");
+      //DBUtils.insertRow(data);
     }
   }
 
@@ -117,9 +118,14 @@ class BleService {
     _connectAndReadOnce(d.id);
   }
   bool _gattBusy = false;
+  String? _pendingDeviceId;
+  static const _gattConnectTimeout = Duration(seconds: 20);
 
   Future<void> _connectAndReadOnce(String deviceId) async {
-    if (_gattBusy) return;
+    if (_gattBusy) {
+      _pendingDeviceId = deviceId;
+      return;
+    }
     _gattBusy = true;
     try {
       final value = await connectAndReadCharacteristic(deviceId);
@@ -127,13 +133,24 @@ class BleService {
       final decodedInfo = decodeBytes(value.sublist(4)); // this is payload
       print("human timestamp: ${DateFormat.Hms().format(DateTime.now())}");
       print("GATT decoded: $decodedInfo");
+    } catch (e) {
+      // No-op: transient BLE connect/disconnects are expected.
     } finally {
       _gattBusy = false;
+      final pending = _pendingDeviceId;
+      _pendingDeviceId = null;
+      if (pending != null) {
+        Future(() => _connectAndReadOnce(pending));
+      }
     }
   }
 
   // 3. GATT Handling
   Future<List<int>> connectAndReadCharacteristic(String deviceId) async {
+  // Cancel any previous connection stream to avoid overlapping connections.
+  await _connSub?.cancel();
+  _connSub = null;
+
   // Connection stream (we'll wait until connected)
   final completer = Completer<void>();
 
@@ -152,6 +169,7 @@ class BleService {
           if (!completer.isCompleted) completer.complete();
         } else if (update.connectionState ==
             DeviceConnectionState.disconnected) {
+          print("BLE disconnected: $deviceId");
           if (!completer.isCompleted) {
             completer.completeError(Exception("Disconnected before ready"));
           }
@@ -160,23 +178,28 @@ class BleService {
         if (!completer.isCompleted) completer.completeError(e);
       });
 
-    // Wait for connected
-    await completer.future;
-
-    // Now read the characteristic (this is where iOS will trigger pairing if required)
-    final qc = QualifiedCharacteristic(
-      deviceId: deviceId,
-      serviceId: sensorServiceUUID,
-      characteristicId: sensorCharacteristicUUID,
-    );
-
-    // iOS sometimes needs a short beat after connection/encryption;
-    // do a simple retry once (very common with encrypted characteristics)
     try {
-      return await ble.readCharacteristic(qc);
-    } catch (_) {
-      await Future.delayed(const Duration(milliseconds: 700));
-      return await ble.readCharacteristic(qc);
+      // Wait for connected (avoid hanging if the device disconnects rapidly).
+      await completer.future.timeout(_gattConnectTimeout);
+
+      // Now read the characteristic (this is where iOS will trigger pairing if required)
+      final qc = QualifiedCharacteristic(
+        deviceId: deviceId,
+        serviceId: sensorServiceUUID,
+        characteristicId: sensorCharacteristicUUID,
+      );
+
+      // iOS sometimes needs a short beat after connection/encryption;
+      // do a simple retry once (very common with encrypted characteristics)
+      try {
+        return await ble.readCharacteristic(qc);
+      } catch (_) {
+        await Future.delayed(const Duration(milliseconds: 700));
+        return await ble.readCharacteristic(qc);
+      }
+    } finally {
+      await _connSub?.cancel();
+      _connSub = null;
     }
   }
   // 4. Core
