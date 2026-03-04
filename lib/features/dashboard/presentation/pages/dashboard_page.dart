@@ -5,12 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/themes/app_theme.dart';
 import '../../../../core/constants/database_lib.dart';
 import '../../../../shared/widgets/app_drawer.dart';
-import '../../../food_diary/presentation/widgets/macro_bars_widget.dart';
 import '../widgets/educational_tip_widget.dart';
-import '../widgets/molecule_bars_widget.dart';
-import '../widgets/swipeable_section_widget.dart';
-import '../widgets/weekly_nutrition_widget.dart';
-import '../widgets/weekly_molecules_widget.dart';
 
 @RoutePage()
 class DashboardPage extends StatefulWidget {
@@ -95,12 +90,7 @@ class _DashboardPageState extends State<DashboardPage> {
               const SizedBox(height: 8),
               _buildGlucoseKetoneChart(),
               _buildGkiCard(),
-              _buildQuickActionsGrid(),
-              _buildMacroPreviewSection(),
-              _buildQuickMetricsSection(),
-              _buildRecentReadingsSection(),
-              _buildEducationSection(),
-              const SizedBox(height: 100), // Space for FAB
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -153,49 +143,29 @@ class _DashboardPageState extends State<DashboardPage> {
               BottomNavigationBarItem(
                 icon: Padding(
                   padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.restaurant_outlined, size: 22),
+                  child: Icon(Icons.download_outlined, size: 22),
                 ),
                 activeIcon: Padding(
                   padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.restaurant, size: 22),
+                  child: Icon(Icons.download, size: 22),
                 ),
-                label: 'Diary',
+                label: 'Export',
               ),
               BottomNavigationBarItem(
                 icon: Padding(
                   padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.analytics_outlined, size: 22),
+                  child: Icon(Icons.settings_outlined, size: 22),
                 ),
                 activeIcon: Padding(
                   padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.analytics, size: 22),
+                  child: Icon(Icons.settings, size: 22),
                 ),
-                label: 'Trends',
-              ),
-              BottomNavigationBarItem(
-                icon: Padding(
-                  padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.more_horiz, size: 22),
-                ),
-                activeIcon: Padding(
-                  padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.more_horiz, size: 22),
-                ),
-                label: 'More',
+                label: 'Settings',
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.router.pushNamed('/data-entry');
-        },
-        backgroundColor: AppTheme.primaryColor,
-        elevation: 4,
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
@@ -761,492 +731,12 @@ Widget _buildGlucoseKetoneChart() {
     );
   }
 
-  Widget _buildQuickActionsGrid() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Quick Actions',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.4,
-            children: [
-              _buildQuickActionCard(
-                icon: Icons.add_circle,
-                title: 'Log Data',
-                subtitle: 'Add glucose & ketones',
-                color: AppTheme.primaryColor,
-                onTap: () => context.router.pushNamed('/data-entry'),
-              ),
-              _buildQuickActionCard(
-                icon: Icons.restaurant,
-                title: 'Food Diary',
-                subtitle: 'Track your meals',
-                color: Colors.orange,
-                onTap: () => context.router.pushNamed('/food-diary'),
-              ),
-              _buildQuickActionCard(
-                icon: Icons.favorite,
-                title: 'Health Log',
-                subtitle: 'Log symptoms & wellness',
-                color: Colors.red,
-                onTap: () => context.router.pushNamed('/health-logging'),
-              ),
-              _buildQuickActionCard(
-                icon: Icons.analytics,
-                title: 'Analytics',
-                subtitle: 'View trends & insights',
-                color: Colors.blue,
-                onTap: () {
-                  // TODO: Navigate to analytics
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 0,
-      color: color.withOpacity(0.1),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                  fontSize: 14,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textSecondaryColor,
-                  fontSize: 11,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMacroPreviewSection() {
-    return Column(
-      children: [
-        // Swipeable Nutrition Section (Daily/Weekly)
-        SwipeableSectionWidget(
-          title: 'Nutrition',
-          dailyWidget: MacroBarsWidget(
-            carbsGrams: 11.0, // Example values from the slide
-            proteinGrams: 75.0,
-            fatGrams: 50.0,
-            carbsLimit: 20.0, // Using new parameter names
-            proteinGoal: 80.0,
-            fatGoal: 45.0,
-            maxBarHeight: 120.0,
-            showTargetLines: true,
-            showValues: true,
-          ),
-          weeklyWidget: const WeeklyNutritionWidget(),
-          actionText: 'Food Diary',
-          onActionTap: () => context.router.pushNamed('/food-diary'),
-        ),
-
-        const SizedBox(height: 8),
-
-        // Swipeable Molecules Section (Daily/Weekly)
-        SwipeableSectionWidget(
-          title: 'Biomarkers',
-          dailyWidget: MoleculeBarsWidget(
-            glucoseMgDl: 85.0, // Example values
-            bhbMmol: 1.2,
-            gki: 4.1,
-            glucoseTarget: 100.0,
-            bhbTarget: 1.5,
-            gkiTarget: 1.0,
-            maxBarHeight: 120.0,
-            showTargetLines: true,
-            showValues: true,
-          ),
-          weeklyWidget: const WeeklyMoleculesWidget(),
-          actionText: 'Log Data',
-          onActionTap: () => context.router.pushNamed('/data-entry'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickMetricsSection() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Today\'s Metrics',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  // TODO: Navigate to full metrics
-                },
-                child: const Text('View All'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMetricCard(
-                  icon: Icons.scale,
-                  title: 'Weight',
-                  value: '70.5 kg',
-                  change: '-0.2 kg',
-                  isPositive: false,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildMetricCard(
-                  icon: Icons.favorite,
-                  title: 'Heart Rate',
-                  value: '72 bpm',
-                  change: '+3 bpm',
-                  isPositive: true,
-                  color: Colors.red,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required String change,
-    required bool isPositive,
-    required Color color,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const Spacer(),
-                Icon(
-                  isPositive ? Icons.trending_up : Icons.trending_down,
-                  color: isPositive ? Colors.green : Colors.red,
-                  size: 16,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              change,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: isPositive ? Colors.green : Colors.red,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentReadingsSection() {
-    final recentReadings = <Map<String, dynamic>>[];
-    final groupedByTime = <int, Map<String, dynamic>>{};
-    
-    for (final row in _sensorData.reversed.take(20)) {
-      final timestamp = row['timestamp'] as int;
-      final timeKey = (timestamp / 300000).floor(); 
-      
-      if (!groupedByTime.containsKey(timeKey)) {
-        groupedByTime[timeKey] = {'timestamp': timestamp, 'glucose': null, 'ketones': null};
-      }
-      
-      if (row['sensor1'] != null) {
-        groupedByTime[timeKey]!['glucose'] = (row['sensor1'] as num).toDouble();
-      }
-      if (row['sensor2'] != null) {
-        groupedByTime[timeKey]!['ketones'] = (row['sensor2'] as num).toDouble();
-      }
-    }
-    
-    for (final entry in groupedByTime.values) {
-      final glucose = entry['glucose'] as double?;
-      final ketones = entry['ketones'] as double?;
-      
-      if (glucose != null && ketones != null && ketones > 0) {
-        recentReadings.add({
-          'timestamp': entry['timestamp'] as int,
-          'glucose': glucose,
-          'ketones': ketones,
-          'gki': glucose / (ketones * 18.0),
-        });
-      }
-    }
-    
-    recentReadings.sort((a, b) => (b['timestamp'] as int).compareTo(a['timestamp'] as int));
-    final displayReadings = recentReadings.take(5).toList();
-
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Recent Readings',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  // TODO: Navigate to history
-                },
-                child: const Text('View All'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (displayReadings.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'No recent readings available',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.textSecondaryColor,
-                ),
-              ),
-            )
-          else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: displayReadings.length,
-              itemBuilder: (context, index) {
-                final reading = displayReadings[index];
-                final timestamp = DateTime.fromMillisecondsSinceEpoch(reading['timestamp'] as int);
-                final timeStr = _formatReadingTime(timestamp);
-                return _buildRecentReadingItem(
-                  time: timeStr,
-                  glucose: reading['glucose'] as double,
-                  ketones: reading['ketones'] as double,
-                  gki: reading['gki'] as double,
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
-
   String _formatChartTime(DateTime timestamp) {
     final hour = timestamp.hour;
     final minute = timestamp.minute.toString().padLeft(2, '0');
     final period = hour >= 12 ? 'PM' : 'AM';
     final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
     return '$displayHour:$minute $period';
-  }
-
-  String _formatReadingTime(DateTime timestamp) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final readingDay = DateTime(timestamp.year, timestamp.month, timestamp.day);
-    
-    if (readingDay == today) {
-      final hour = timestamp.hour;
-      final minute = timestamp.minute.toString().padLeft(2, '0');
-      final period = hour >= 12 ? 'PM' : 'AM';
-      final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-      return 'Today, $displayHour:$minute $period';
-    } else {
-      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
-    }
-  }
-
-  Widget _buildRecentReadingItem({
-    required String time,
-    required double glucose,
-    required double ketones,
-    required double gki,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: gki <= 3.0
-                ? AppTheme.optimalColor
-                : AppTheme.therapeuticColor,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Center(
-            child: Text(
-              gki.toStringAsFixed(1),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ),
-        title: Text(
-          time,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          'Glucose: ${glucose.toStringAsFixed(0)} mg/dL • Ketones: ${ketones.toStringAsFixed(1)} mmol/L',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondaryColor),
-        ),
-        trailing: Icon(
-          gki <= 3.0 ? Icons.check_circle : Icons.info,
-          color: gki <= 3.0 ? AppTheme.optimalColor : AppTheme.therapeuticColor,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEducationSection() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Learn More',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: const Icon(
-                      Icons.school,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Understanding Your GKI',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Learn how to interpret your glucose-ketone index for optimal health.',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.textSecondaryColor),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    color: AppTheme.textTertiaryColor,
-                    size: 16,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   void _navigateToIndex(int index) {
@@ -1258,9 +748,6 @@ Widget _buildGlucoseKetoneChart() {
         context.router.pushNamed('/food-diary');
         break;
       case 2:
-        // TODO: Navigate to trends/analytics
-        break;
-      case 3:
         context.router.pushNamed('/settings');
         break;
     }

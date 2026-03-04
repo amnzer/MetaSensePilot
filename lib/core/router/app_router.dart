@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/data_entry/presentation/pages/data_entry_page.dart';
-import '../../features/food_diary/presentation/pages/food_diary_page.dart';
+import '../../features/food_diary/presentation/pages/csv_export_page.dart';
 import '../../features/health_logging/presentation/pages/health_logging_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
@@ -22,7 +22,8 @@ class AppRouter extends _$AppRouter {
 
     AutoRoute(page: DataEntryRoute.page, path: '/data-entry'),
 
-    AutoRoute(page: FoodDiaryRoute.page, path: '/food-diary'),
+    // CSV export (reuses legacy /food-diary path)
+    AutoRoute(page: CsvExportRoute.page, path: '/food-diary'),
 
     AutoRoute(page: HealthLoggingRoute.page, path: '/health-logging'),
 

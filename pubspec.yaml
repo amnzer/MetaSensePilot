@@ -79,6 +79,9 @@ dependencies:
   path: ^1.9.1
   flutter_reactive_ble: ^5.4.0
 
+  # Sharing for CSV export
+  share_plus: ^10.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
