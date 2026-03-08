@@ -15,6 +15,12 @@ abstract class _$AppRouter extends RootStackRouter {
 
   @override
   final Map<String, PageFactory> pagesMap = {
+    CsvExportRoute.name: (routeData) {
+      return AutoRoutePage<dynamic>(
+        routeData: routeData,
+        child: const CsvExportPage(),
+      );
+    },
     DashboardRoute.name: (routeData) {
       return AutoRoutePage<dynamic>(
         routeData: routeData,
@@ -25,12 +31,6 @@ abstract class _$AppRouter extends RootStackRouter {
       return AutoRoutePage<dynamic>(
         routeData: routeData,
         child: const DataEntryPage(),
-      );
-    },
-    FoodDiaryRoute.name: (routeData) {
-      return AutoRoutePage<dynamic>(
-        routeData: routeData,
-        child: const FoodDiaryPage(),
       );
     },
     HealthLoggingRoute.name: (routeData) {
@@ -52,6 +52,20 @@ abstract class _$AppRouter extends RootStackRouter {
       );
     },
   };
+}
+
+/// generated route for
+/// [CsvExportPage]
+class CsvExportRoute extends PageRouteInfo<void> {
+  const CsvExportRoute({List<PageRouteInfo>? children})
+      : super(
+          CsvExportRoute.name,
+          initialChildren: children,
+        );
+
+  static const String name = 'CsvExportRoute';
+
+  static const PageInfo<void> page = PageInfo<void>(name);
 }
 
 /// generated route for
@@ -78,20 +92,6 @@ class DataEntryRoute extends PageRouteInfo<void> {
         );
 
   static const String name = 'DataEntryRoute';
-
-  static const PageInfo<void> page = PageInfo<void>(name);
-}
-
-/// generated route for
-/// [FoodDiaryPage]
-class FoodDiaryRoute extends PageRouteInfo<void> {
-  const FoodDiaryRoute({List<PageRouteInfo>? children})
-      : super(
-          FoodDiaryRoute.name,
-          initialChildren: children,
-        );
-
-  static const String name = 'FoodDiaryRoute';
 
   static const PageInfo<void> page = PageInfo<void>(name);
 }

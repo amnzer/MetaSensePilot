@@ -268,7 +268,7 @@ class _MacroBarsWidgetState extends State<MacroBarsWidget>
                         bottom: targetHeight * 0.75,
                         left: 0,
                         right: 0,
-                        child: Container(
+                        child: SizedBox(
                           height: 3,
                           child: isLimit
                               ? _buildLimitLine(

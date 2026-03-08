@@ -174,21 +174,21 @@ class WeeklyMoleculesWidget extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildSummaryMetric(
-                  '${avgGlucose.toStringAsFixed(0)}',
+                  avgGlucose.toStringAsFixed(0),
                   'Glucose',
                   Colors.orange.shade400,
                 ),
               ),
               Expanded(
                 child: _buildSummaryMetric(
-                  '${avgBhb.toStringAsFixed(1)}',
+                  avgBhb.toStringAsFixed(1),
                   'BHB',
                   Colors.amber.shade600,
                 ),
               ),
               Expanded(
                 child: _buildSummaryMetric(
-                  '${avgGki.toStringAsFixed(1)}',
+                  avgGki.toStringAsFixed(1),
                   'GKI',
                   Colors.blue.shade400,
                 ),
