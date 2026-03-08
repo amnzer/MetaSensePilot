@@ -3,13 +3,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/themes/app_theme.dart';
+import '../../../../core/constants/database_lib.dart';
 import '../../../../shared/widgets/app_drawer.dart';
-import '../../../food_diary/presentation/widgets/macro_bars_widget.dart';
 import '../widgets/educational_tip_widget.dart';
-import '../widgets/molecule_bars_widget.dart';
-import '../widgets/swipeable_section_widget.dart';
-import '../widgets/weekly_nutrition_widget.dart';
-import '../widgets/weekly_molecules_widget.dart';
 
 @RoutePage()
 class DashboardPage extends StatefulWidget {
@@ -23,9 +19,76 @@ class _DashboardPageState extends State<DashboardPage> {
   int _selectedIndex = 0;
   String _selectedMetric = 'Glucose';
   String _selectedRange = 'Day';
+  String _selectedCardBiomarker = 'Glucose';
 
-  final List<String> _metricOptions = ['Glucose', 'Ketones'];
+  final List<String> _metricOptions = ['Glucose', 'pH', 'K', 'Na'];
   final List<String> _rangeOptions = ['Day', 'Week', 'Month'];
+
+  // sensor data: sensor1=Glucose, sensor2=pH, sensor3=K, sensor4=Na
+  List<Map<String, dynamic>> _sensorData = [];
+  double? _latestGlucose;
+  double? _latestPH;
+  double? _latestK;
+  double? _latestNa;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final now = DateTime.now();
+      final List<Map<String, dynamic>> data;
+      switch (_selectedRange) {
+        case 'Day':
+          data = await DBUtils.getTodaySensorData();
+          break;
+        case 'Week':
+          data = await DBUtils.getSensorDataInRange(
+            start: now.subtract(const Duration(days: 7)),
+            end: now,
+          );
+          break;
+        case 'Month':
+          data = await DBUtils.getSensorDataInRange(
+            start: now.subtract(const Duration(days: 30)),
+            end: now,
+          );
+          break;
+        default:
+          data = await DBUtils.getTodaySensorData();
+      }
+      if (!mounted) return;
+      setState(() {
+        _sensorData = data;
+        // latest values per biomarker (from most recent reading in loaded range)
+        if (data.isNotEmpty) {
+          final latest = data.last;
+          _latestGlucose = latest['sensor1'] != null ? (latest['sensor1'] as num).toDouble() : null;
+          _latestPH = latest['sensor2'] != null ? (latest['sensor2'] as num).toDouble() : null;
+          _latestK = latest['sensor3'] != null ? (latest['sensor3'] as num).toDouble() : null;
+          _latestNa = latest['sensor4'] != null ? (latest['sensor4'] as num).toDouble() : null;
+        } else {
+          _latestGlucose = null;
+          _latestPH = null;
+          _latestK = null;
+          _latestNa = null;
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _sensorData = [];
+          _latestGlucose = null;
+          _latestPH = null;
+          _latestK = null;
+          _latestNa = null;
+        });
+      }
+    }
+  }
 
 
   @override
@@ -33,27 +96,10 @@ class _DashboardPageState extends State<DashboardPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {
-              // TODO: Show notifications
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {
-              // TODO: Show more options
-            },
-          ),
-        ],
       ),
       drawer: const AppDrawer(),
       body: RefreshIndicator(
-        onRefresh: () async {
-          // TODO: Refresh data
-          await Future.delayed(const Duration(seconds: 1));
-        },
+        onRefresh: _loadData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
@@ -63,12 +109,7 @@ class _DashboardPageState extends State<DashboardPage> {
               const SizedBox(height: 8),
               _buildGlucoseKetoneChart(),
               _buildGkiCard(),
-              _buildQuickActionsGrid(),
-              _buildMacroPreviewSection(),
-              _buildQuickMetricsSection(),
-              _buildRecentReadingsSection(),
-              _buildEducationSection(),
-              const SizedBox(height: 100), // Space for FAB
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -121,107 +162,124 @@ class _DashboardPageState extends State<DashboardPage> {
               BottomNavigationBarItem(
                 icon: Padding(
                   padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.restaurant_outlined, size: 22),
+                  child: Icon(Icons.download_outlined, size: 22),
                 ),
                 activeIcon: Padding(
                   padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.restaurant, size: 22),
+                  child: Icon(Icons.download, size: 22),
                 ),
-                label: 'Diary',
+                label: 'Export',
               ),
               BottomNavigationBarItem(
                 icon: Padding(
                   padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.analytics_outlined, size: 22),
+                  child: Icon(Icons.settings_outlined, size: 22),
                 ),
                 activeIcon: Padding(
                   padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.analytics, size: 22),
+                  child: Icon(Icons.settings, size: 22),
                 ),
-                label: 'Trends',
-              ),
-              BottomNavigationBarItem(
-                icon: Padding(
-                  padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.more_horiz, size: 22),
-                ),
-                activeIcon: Padding(
-                  padding: EdgeInsets.only(bottom: 2),
-                  child: Icon(Icons.more_horiz, size: 22),
-                ),
-                label: 'More',
+                label: 'Settings',
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.router.pushNamed('/data-entry');
-        },
-        backgroundColor: AppTheme.primaryColor,
-        elevation: 4,
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
+String _getSensorColumnForMetric(String metric) {
+  switch (metric) {
+    case 'Glucose': return 'sensor1';
+    case 'pH': return 'sensor2';
+    case 'K': return 'sensor3';
+    case 'Na': return 'sensor4';
+    default: return 'sensor1';
+  }
+}
+
+String _getUnitForMetric(String metric) {
+  switch (metric) {
+    case 'Glucose': return 'mg/dL';
+    case 'pH': return 'pH';
+    case 'K':
+    case 'Na': return 'mmol/L';
+    default: return '';
+  }
+}
+
 Widget _buildGlucoseKetoneChart() {
+  final String sensorColumn = _getSensorColumnForMetric(_selectedMetric);
+  final String yAxisLabel = _getUnitForMetric(_selectedMetric);
   final bool isGlucose = _selectedMetric == 'Glucose';
-  final String yAxisLabel = isGlucose ? 'mg/dL' : 'mmol/L';
+  final bool isPH = _selectedMetric == 'pH';
 
-  // TO DO: replace dummy data w real sensor data
-  final List<FlSpot> glucoseData = [
-    const FlSpot(0, 85),
-    const FlSpot(1, 90),
-    const FlSpot(2, 80),
-    const FlSpot(3, 95),
-  ];
-
-  final List<FlSpot> ketoneData = [
-    const FlSpot(0, 1.2),
-    const FlSpot(1, 1.1),
-    const FlSpot(2, 1.4),
-    const FlSpot(3, 1.0),
-  ];
-
-  final List<FlSpot> chartData = isGlucose ? glucoseData : ketoneData;
+  List<FlSpot> chartData = [];
+  DateTime? baseTimestamp;
+  
+  if (_sensorData.isNotEmpty) {
+    final timestamps = _sensorData
+        .map((row) => row['timestamp'])
+        .whereType<int>()
+        .toList();
+    if (timestamps.isNotEmpty) {
+      baseTimestamp = DateTime.fromMillisecondsSinceEpoch(
+        timestamps.reduce((a, b) => a < b ? a : b),
+      );
+    }
+    
+    chartData = _sensorData.map((row) {
+      final value = row[sensorColumn];
+      final tsMillis = row['timestamp'] as int?;
+      
+      if (value != null && tsMillis != null && baseTimestamp != null) {
+        final timestamp = DateTime.fromMillisecondsSinceEpoch(tsMillis);
+        final hoursSinceBase =
+            timestamp.difference(baseTimestamp).inMilliseconds / 3600000.0;
+        return FlSpot(hoursSinceBase, (value as num).toDouble());
+      }
+      return null;
+    }).whereType<FlSpot>().where((spot) => spot.y > 0).toList();
+  }
+  
+  // dummy data when none
+  if (chartData.isEmpty) {
+    if (isGlucose) {
+      chartData = [const FlSpot(0, 85), const FlSpot(1, 90), const FlSpot(2, 80), const FlSpot(3, 95)];
+    } else if (isPH) {
+      chartData = [const FlSpot(0, 7.2), const FlSpot(1, 7.3), const FlSpot(2, 7.25), const FlSpot(3, 7.4)];
+    } else {
+      chartData = [const FlSpot(0, 4.0), const FlSpot(1, 4.2), const FlSpot(2, 3.9), const FlSpot(3, 4.1)];
+    }
+  }
+  baseTimestamp ??= DateTime.now();
   const double dotSize = 4.5;
-
 
   double yMin = chartData.map((spot) => spot.y).reduce((a, b) => a < b ? a : b);
   double yMax = chartData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
-  
- 
   double yRange = yMax - yMin;
-  if (yRange == 0) yRange = isGlucose ? 20 : 0.5; 
-  yMin = (yMin - yRange * 0.1).clamp(0, double.infinity);
+  if (yRange == 0) {
+    if (isGlucose) yRange = 20;
+    else if (isPH) yRange = 0.5;
+    else yRange = 0.5;
+  }
+  yMin = (yMin - yRange * 0.1).clamp(0.0, double.infinity);
   yMax = yMax + yRange * 0.1;
-  
-  
+
   double yRangeWithPadding = yMax - yMin;
-  double yInterval = yRangeWithPadding / 4; 
+  double yInterval = yRangeWithPadding / 4;
   if (isGlucose) {
-    
-    if (yInterval < 5) {
-      yInterval = 5;
-    } else if (yInterval < 10) {
-      yInterval = 10;
-    } else {
-      yInterval = (yInterval / 10).ceilToDouble() * 10;
-    }
+    if (yInterval < 5) yInterval = 5;
+    else if (yInterval < 10) yInterval = 10;
+    else yInterval = (yInterval / 10).ceilToDouble() * 10;
+  } else if (isPH) {
+    if (yInterval < 0.1) yInterval = 0.1;
+    else if (yInterval < 0.2) yInterval = 0.2;
+    else yInterval = (yInterval * 2).ceilToDouble() / 2;
   } else {
-    
-    if (yInterval < 0.1) {
-      yInterval = 0.1;
-    } else if (yInterval < 0.2) {
-      yInterval = 0.2;
-    } else if (yInterval < 0.5) {
-      yInterval = 0.5;
-    } else {
-      yInterval = (yInterval * 2).ceilToDouble() / 2;
-    }
+    if (yInterval < 0.1) yInterval = 0.1;
+    else if (yInterval < 0.2) yInterval = 0.2;
+    else yInterval = (yInterval * 2).ceilToDouble() / 2;
   }
 
   
@@ -236,8 +294,18 @@ Widget _buildGlucoseKetoneChart() {
   
   
   double xRangeWithPadding = xMax - xMin;
-  double xInterval = xRangeWithPadding / 4; 
-  xInterval = xInterval.ceilToDouble().clamp(1, double.infinity);
+  double xInterval = xRangeWithPadding / 4;
+  if (xInterval <= 2) {
+    xInterval = 2;
+  } else if (xInterval <= 3) {
+    xInterval = 3;
+  } else if (xInterval <= 4) {
+    xInterval = 4;
+  } else if (xInterval <= 6) {
+    xInterval = 6;
+  } else {
+    xInterval = (xInterval / 6).ceilToDouble() * 6; 
+  }
 
   return Card(
     margin: const EdgeInsets.all(16),
@@ -281,9 +349,11 @@ Widget _buildGlucoseKetoneChart() {
                         ))
                     .toList(),
                 onChanged: (value) {
+                  if (value == null) return;
                   setState(() {
-                    _selectedRange = value!;
+                    _selectedRange = value;
                   });
+                  _loadData();
                 },
               ),
             ],
@@ -338,9 +408,7 @@ Widget _buildGlucoseKetoneChart() {
                           return const Text('');
                         }
                         return Text(
-                          isGlucose 
-                            ? value.toInt().toString()
-                            : value.toStringAsFixed(1),
+                          isGlucose ? value.toInt().toString() : value.toStringAsFixed(1),
                           style: const TextStyle(fontSize: 12),
                         );
                       },
@@ -351,21 +419,32 @@ Widget _buildGlucoseKetoneChart() {
                     axisNameSize: 22,
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: 40,
                       interval: xInterval,
                       getTitlesWidget: (value, meta) {
-                        
-                        const double epsilon = 0.001;
-                        if (value < xMin || value > xMax || 
-                            (value - xMin).abs() < epsilon || 
-                            (value - xMax).abs() < epsilon) {
+          
+                        const double epsilon = 0.1;
+                        if (value < xMin - epsilon || value > xMax + epsilon) {
                           return const SizedBox.shrink();
                         }
+                      
+                        if (baseTimestamp == null) {
+                          return const SizedBox.shrink();
+                        }
+                        
+                        final displayTime = baseTimestamp.add(
+                          Duration(
+                            minutes: (value * 60).round(),
+                          ),
+                        );
+                        final label = _selectedRange == 'Day'
+                            ? _formatChartTime(displayTime)
+                            : _formatChartDate(displayTime);
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
-                            value.toInt().toString(),
-                            style: const TextStyle(fontSize: 12),
+                            label,
+                            style: const TextStyle(fontSize: 10),
                           ),
                         );
                       },
@@ -377,6 +456,50 @@ Widget _buildGlucoseKetoneChart() {
 
                 gridData: FlGridData(show: true),
                 borderData: FlBorderData(show: true),
+                lineTouchData: LineTouchData(
+                  enabled: true,
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipItems: (List<LineBarSpot> touchedSpots) {
+                      return touchedSpots.map((LineBarSpot touchedSpot) {
+        
+                        if (baseTimestamp == null) {
+                          return LineTooltipItem(
+                            '${isGlucose ? touchedSpot.y.toInt() : touchedSpot.y.toStringAsFixed(1)} $yAxisLabel',
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        }
+                        final displayTime = baseTimestamp.add(
+                          Duration(minutes: (touchedSpot.x * 60).round()),
+                        );
+                        final timeStr = _selectedRange == 'Day'
+                            ? _formatChartTime(displayTime)
+                            : _formatChartDate(displayTime);
+                        final valueStr = isGlucose
+                            ? touchedSpot.y.toInt().toString()
+                            : touchedSpot.y.toStringAsFixed(1);
+
+                        return LineTooltipItem(
+                          '$timeStr\n$valueStr $yAxisLabel',
+                          const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        );
+                      }).toList();
+                    },
+                    tooltipBgColor: AppTheme.primaryColor.withOpacity(0.9),
+                    tooltipRoundedRadius: 8,
+                    tooltipPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  touchSpotThreshold: 50,
+                ),
               ),
             ),
           ),
@@ -503,25 +626,30 @@ Widget _buildGlucoseKetoneChart() {
     );
   }
 
+  double? _getLatestForBiomarker(String biomarker) {
+    switch (biomarker) {
+      case 'Glucose': return _latestGlucose;
+      case 'pH': return _latestPH;
+      case 'K': return _latestK;
+      case 'Na': return _latestNa;
+      default: return _latestGlucose;
+    }
+  }
+
+  double _getFallbackForBiomarker(String biomarker) {
+    switch (biomarker) {
+      case 'Glucose': return 85.0;
+      case 'pH': return 7.35;
+      case 'K': return 4.0;
+      case 'Na': return 140.0;
+      default: return 85.0;
+    }
+  }
+
   Widget _buildGkiCard() {
-    // Mock data - in real app this would come from state management
-    const double glucose = 85.0;
-    const double ketones = 1.2;
-    const double gki = glucose / (ketones * 18.0);
-
-    Color getGkiColor() {
-      if (gki <= 3.0) return AppTheme.optimalColor;
-      if (gki <= 6.0) return AppTheme.therapeuticColor;
-      if (gki <= 9.0) return AppTheme.cautionColor;
-      return AppTheme.criticalColor;
-    }
-
-    String getGkiStatus() {
-      if (gki <= 3.0) return 'Optimal';
-      if (gki <= 6.0) return 'Therapeutic';
-      if (gki <= 9.0) return 'Moderate';
-      return 'High';
-    }
+    final value = _getLatestForBiomarker(_selectedCardBiomarker) ?? _getFallbackForBiomarker(_selectedCardBiomarker);
+    final unit = _getUnitForMetric(_selectedCardBiomarker);
+    final isGlucose = _selectedCardBiomarker == 'Glucose';
 
     return Card(
       margin: const EdgeInsets.all(16),
@@ -534,71 +662,39 @@ Widget _buildGlucoseKetoneChart() {
                 Icon(Icons.analytics, color: AppTheme.primaryColor, size: 24),
                 const SizedBox(width: 12),
                 Text(
-                  'Glucose-Ketone Index',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  'Current level',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.info_outline),
-                  onPressed: () {
-                    // TODO: Show GKI information
+                DropdownButton<String>(
+                  value: _selectedCardBiomarker,
+                  items: _metricOptions
+                      .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _selectedCardBiomarker = v);
                   },
                 ),
               ],
             ),
             const SizedBox(height: 24),
-            Stack(
-              alignment: Alignment.center,
+            Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: getGkiColor(), width: 8),
+                Text(
+                  isGlucose ? value.toInt().toString() : value.toStringAsFixed(2),
+                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryColor,
                   ),
                 ),
-                Column(
-                  children: [
-                    Text(
-                      gki.toStringAsFixed(1),
-                      style: Theme.of(context).textTheme.headlineLarge
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: getGkiColor(),
-                          ),
-                    ),
-                    Text(
-                      getGkiStatus(),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: getGkiColor(),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildGkiMetric(
-                    icon: Icons.water_drop,
-                    label: 'Glucose',
-                    value: '${glucose.toStringAsFixed(0)} mg/dL',
-                    color: Colors.orange,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildGkiMetric(
-                    icon: Icons.science,
-                    label: 'Ketones',
-                    value: '${ketones.toStringAsFixed(1)} mmol/L',
-                    color: Colors.purple,
+                const SizedBox(height: 4),
+                Text(
+                  unit,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondaryColor,
                   ),
                 ),
               ],
@@ -609,453 +705,22 @@ Widget _buildGlucoseKetoneChart() {
     );
   }
 
-  Widget _buildGkiMetric({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppTheme.textSecondaryColor),
-          ),
-        ],
-      ),
-    );
+  String _formatChartTime(DateTime timestamp) {
+    final hour = timestamp.hour;
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    return '$displayHour:$minute $period';
   }
 
-  Widget _buildQuickActionsGrid() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Quick Actions',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.4,
-            children: [
-              _buildQuickActionCard(
-                icon: Icons.add_circle,
-                title: 'Log Data',
-                subtitle: 'Add glucose & ketones',
-                color: AppTheme.primaryColor,
-                onTap: () => context.router.pushNamed('/data-entry'),
-              ),
-              _buildQuickActionCard(
-                icon: Icons.restaurant,
-                title: 'Food Diary',
-                subtitle: 'Track your meals',
-                color: Colors.orange,
-                onTap: () => context.router.pushNamed('/food-diary'),
-              ),
-              _buildQuickActionCard(
-                icon: Icons.favorite,
-                title: 'Health Log',
-                subtitle: 'Log symptoms & wellness',
-                color: Colors.red,
-                onTap: () => context.router.pushNamed('/health-logging'),
-              ),
-              _buildQuickActionCard(
-                icon: Icons.analytics,
-                title: 'Analytics',
-                subtitle: 'View trends & insights',
-                color: Colors.blue,
-                onTap: () {
-                  // TODO: Navigate to analytics
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 0,
-      color: color.withOpacity(0.1),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 20),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                  fontSize: 14,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.textSecondaryColor,
-                  fontSize: 11,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMacroPreviewSection() {
-    return Column(
-      children: [
-        // Swipeable Nutrition Section (Daily/Weekly)
-        SwipeableSectionWidget(
-          title: 'Nutrition',
-          dailyWidget: MacroBarsWidget(
-            carbsGrams: 11.0, // Example values from the slide
-            proteinGrams: 75.0,
-            fatGrams: 50.0,
-            carbsLimit: 20.0, // Using new parameter names
-            proteinGoal: 80.0,
-            fatGoal: 45.0,
-            maxBarHeight: 120.0,
-            showTargetLines: true,
-            showValues: true,
-          ),
-          weeklyWidget: const WeeklyNutritionWidget(),
-          actionText: 'Food Diary',
-          onActionTap: () => context.router.pushNamed('/food-diary'),
-        ),
-
-        const SizedBox(height: 8),
-
-        // Swipeable Molecules Section (Daily/Weekly)
-        SwipeableSectionWidget(
-          title: 'Biomarkers',
-          dailyWidget: MoleculeBarsWidget(
-            glucoseMgDl: 85.0, // Example values
-            bhbMmol: 1.2,
-            gki: 4.1,
-            glucoseTarget: 100.0,
-            bhbTarget: 1.5,
-            gkiTarget: 1.0,
-            maxBarHeight: 120.0,
-            showTargetLines: true,
-            showValues: true,
-          ),
-          weeklyWidget: const WeeklyMoleculesWidget(),
-          actionText: 'Log Data',
-          onActionTap: () => context.router.pushNamed('/data-entry'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickMetricsSection() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Today\'s Metrics',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  // TODO: Navigate to full metrics
-                },
-                child: const Text('View All'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMetricCard(
-                  icon: Icons.scale,
-                  title: 'Weight',
-                  value: '70.5 kg',
-                  change: '-0.2 kg',
-                  isPositive: false,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildMetricCard(
-                  icon: Icons.favorite,
-                  title: 'Heart Rate',
-                  value: '72 bpm',
-                  change: '+3 bpm',
-                  isPositive: true,
-                  color: Colors.red,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetricCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required String change,
-    required bool isPositive,
-    required Color color,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const Spacer(),
-                Icon(
-                  isPositive ? Icons.trending_up : Icons.trending_down,
-                  color: isPositive ? Colors.green : Colors.red,
-                  size: 16,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              change,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: isPositive ? Colors.green : Colors.red,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentReadingsSection() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Recent Readings',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  // TODO: Navigate to history
-                },
-                child: const Text('View All'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 3,
-            itemBuilder: (context, index) {
-              return _buildRecentReadingItem(
-                time: 'Today, ${8 + index * 2}:00 AM',
-                glucose: 85 + (index * 5),
-                ketones: 1.2 - (index * 0.1),
-                gki: (85 + (index * 5)) / ((1.2 - (index * 0.1)) * 18.0),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentReadingItem({
-    required String time,
-    required double glucose,
-    required double ketones,
-    required double gki,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: gki <= 3.0
-                ? AppTheme.optimalColor
-                : AppTheme.therapeuticColor,
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Center(
-            child: Text(
-              gki.toStringAsFixed(1),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ),
-        title: Text(
-          time,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(
-          'Glucose: ${glucose.toStringAsFixed(0)} mg/dL • Ketones: ${ketones.toStringAsFixed(1)} mmol/L',
-          style: Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondaryColor),
-        ),
-        trailing: Icon(
-          gki <= 3.0 ? Icons.check_circle : Icons.info,
-          color: gki <= 3.0 ? AppTheme.optimalColor : AppTheme.therapeuticColor,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEducationSection() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Learn More',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: const Icon(
-                      Icons.school,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Understanding Your GKI',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Learn how to interpret your glucose-ketone index for optimal health.',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(color: AppTheme.textSecondaryColor),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    color: AppTheme.textTertiaryColor,
-                    size: 16,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  String _formatChartDate(DateTime timestamp) {
+    final m = timestamp.month.toString().padLeft(2, '0');
+    final d = timestamp.day.toString().padLeft(2, '0');
+    final hour = timestamp.hour;
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    return '$m/$d $displayHour:$minute$period';
   }
 
   void _navigateToIndex(int index) {
@@ -1067,9 +732,6 @@ Widget _buildGlucoseKetoneChart() {
         context.router.pushNamed('/food-diary');
         break;
       case 2:
-        // TODO: Navigate to trends/analytics
-        break;
-      case 3:
         context.router.pushNamed('/settings');
         break;
     }

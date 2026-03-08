@@ -39,10 +39,10 @@ class AppDrawer extends StatelessWidget {
                 //),
                 _buildNavigationItem(
                   context: context,
-                  icon: Icons.restaurant_outlined,
-                  selectedIcon: Icons.restaurant,
-                  title: 'History',
-                  subtitle: 'See health logs',
+                  icon: Icons.download_outlined,
+                  selectedIcon: Icons.download,
+                  title: 'Data Export',
+                  subtitle: 'Download CSV log',
                   route: '/food-diary',
                 ),
                 //_buildNavigationItem(
@@ -53,14 +53,6 @@ class AppDrawer extends StatelessWidget {
                 //  subtitle: 'Symptoms & wellness',
                 //  route: '/health-logging',
                 //),
-                _buildNavigationItem(
-                  context: context,
-                  icon: Icons.analytics_outlined,
-                  selectedIcon: Icons.analytics,
-                  title: 'Analytics',
-                  subtitle: 'Trends & reports',
-                  route: '/analytics',
-                ),
                 //_buildNavigationItem(
                 //  context: context,
                 //  icon: Icons.calendar_today_outlined,
