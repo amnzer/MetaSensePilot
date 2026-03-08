@@ -1,11 +1,14 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/themes/app_theme.dart';
 import '../../../../core/constants/database_lib.dart';
 import '../../../../shared/widgets/app_drawer.dart';
 import '../widgets/educational_tip_widget.dart';
+
+const String _keyUserName = 'settings_user_name';
 
 @RoutePage()
 class DashboardPage extends StatefulWidget {
@@ -31,10 +34,21 @@ class _DashboardPageState extends State<DashboardPage> {
   double? _latestK;
   double? _latestNa;
 
+  String _userName = 'John';
+
   @override
   void initState() {
     super.initState();
     _loadData();
+    _loadProfileName();
+  }
+
+  Future<void> _loadProfileName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString(_keyUserName);
+    if (name != null && name.isNotEmpty && mounted) {
+      setState(() => _userName = name);
+    }
   }
 
   Future<void> _loadData() async {
@@ -543,7 +557,7 @@ Widget _buildGlucoseKetoneChart() {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Good Morning, John!',
+                      'Hello, $_userName!',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             color: Colors.white,
@@ -732,7 +746,9 @@ Widget _buildGlucoseKetoneChart() {
         context.router.pushNamed('/food-diary');
         break;
       case 2:
-        context.router.pushNamed('/settings');
+        context.router.pushNamed('/settings').then((_) {
+          if (mounted) _loadProfileName();
+        });
         break;
     }
   }
