@@ -138,6 +138,7 @@ class _CsvExportPageState extends State<CsvExportPage> {
       final rows = await DBUtils.getAllSensorData(orderDesc: false);
 
       if (rows.isEmpty) {
+        if (!mounted) return;
         setState(() {
           _isExporting = false;
           _statusMessage = 'No data found to export.';
@@ -199,11 +200,13 @@ class _CsvExportPageState extends State<CsvExportPage> {
         text: 'MetaSense sensor data CSV export',
       );
 
+      if (!mounted) return;
       setState(() {
         _isExporting = false;
         _statusMessage = 'CSV generated and share sheet opened.';
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isExporting = false;
         _statusMessage = 'Failed to export CSV: $e';

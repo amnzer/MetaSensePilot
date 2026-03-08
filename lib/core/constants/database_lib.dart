@@ -113,18 +113,32 @@ class DBUtils{
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day);
     final startTimestamp = startOfDay.millisecondsSinceEpoch;
-    
+
     return await database.rawQuery(
       'SELECT * FROM $tablename WHERE timestamp >= ? ORDER BY timestamp ASC',
       [startTimestamp],
     );
   }
 
+  /// Get sensor data within a time range [start, end] (inclusive), ordered by timestamp ASC.
+  static Future<List<Map<String, dynamic>>> getSensorDataInRange({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final database = await db;
+    final startMs = start.millisecondsSinceEpoch;
+    final endMs = end.millisecondsSinceEpoch;
+    return await database.rawQuery(
+      'SELECT * FROM $tablename WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC',
+      [startMs, endMs],
+    );
+  }
+
   // delete db
-  static void deleteDB() async{
+  static Future<void> deleteDB() async {
     var databasesPath = await getDatabasesPath();
     String path = join(databasesPath, dbname);
-    deleteDatabase(path);
+    await deleteDatabase(path);
   }
 
 }
