@@ -183,10 +183,12 @@ class _SettingsPageState extends State<SettingsPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyUserName, name);
     await prefs.setString(_keyUserEmail, email);
-    if (mounted) setState(() {
+    if (mounted) {
+      setState(() {
       _name = name;
       _email = email;
     });
+    }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

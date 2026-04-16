@@ -94,7 +94,7 @@ extension HealthMetricTypeExtension on HealthMetricType {
       case HealthMetricType.bloodGlucose:
         return 'mg/dL';
       case HealthMetricType.bloodKetones:
-        return 'mmol/L';
+        return 'V';
       case HealthMetricType.weight:
         return 'kg';
       case HealthMetricType.bloodPressureSystolic:

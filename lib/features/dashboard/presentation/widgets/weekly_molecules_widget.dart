@@ -25,7 +25,7 @@ class WeeklyMoleculesWidget extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _buildLegendItem('Glucose (mg/dL)', Colors.orange.shade400),
-        _buildLegendItem('BHB (mmol/L)', Colors.amber.shade600),
+        _buildLegendItem('BHB (V)', Colors.amber.shade600),
         _buildLegendItem('GKI', Colors.blue.shade400),
       ],
     );

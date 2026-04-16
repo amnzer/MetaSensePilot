@@ -140,8 +140,8 @@ class _MoleculeBarsWidgetState extends State<MoleculeBarsWidget>
   }
 
   Widget _buildBhbBar(double availableHeight) {
-    // BHB scale: 0-5 mmol/L
-    double maxValue = 5.0;
+    // BHB scale: 0-1 V
+    double maxValue = 1.0;
     double normalizedValue = widget.bhbMmol.clamp(0, maxValue);
     double normalizedTarget = widget.bhbTarget.clamp(0, maxValue);
 
@@ -149,7 +149,7 @@ class _MoleculeBarsWidgetState extends State<MoleculeBarsWidget>
       label: 'BHB',
       value: normalizedValue,
       targetValue: normalizedTarget,
-      unit: 'mmol/L',
+      unit: 'V',
       maxValue: maxValue,
       color: Colors.yellow.shade700,
       animationValue: _animation.value,
@@ -338,7 +338,7 @@ class _MoleculeBarsWidgetState extends State<MoleculeBarsWidget>
             'BHB',
             Colors.yellow.shade700,
             widget.bhbMmol,
-            'mmol/L',
+            'V',
           ),
           _buildLegendItem('GKI', Colors.blue.shade600, widget.gki, ''),
         ],
@@ -388,7 +388,7 @@ class _MoleculeBarsWidgetState extends State<MoleculeBarsWidget>
   }
 
   String _formatDisplayValue(double value, String unit) {
-    if (unit == 'mmol/L' || unit.isEmpty) {
+    if (unit == 'V' || unit.isEmpty) {
       return '${value.toStringAsFixed(1)}${unit.isNotEmpty ? ' $unit' : ''}';
     } else {
       return '${value.toStringAsFixed(0)} $unit';
@@ -446,7 +446,7 @@ class _MoleculeBarsWidgetState extends State<MoleculeBarsWidget>
             Text('  • Good: 100-125'),
             Text('  • High: >125'),
             SizedBox(height: 8),
-            Text('⚡ BHB (mmol/L)'),
+            Text('⚡ BHB (V)'),
             Text('  • Ketosis: 0.5-3.0'),
             Text('  • Higher = deeper ketosis'),
             SizedBox(height: 8),

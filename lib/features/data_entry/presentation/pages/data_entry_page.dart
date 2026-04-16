@@ -241,7 +241,7 @@ class _DataEntryPageState extends State<DataEntryPage>
             Expanded(
               child: _buildBiomarkerInputCard(
                 'BHB',
-                'mmol/L',
+                'V',
                 _bhbController,
                 Colors.yellow.shade700,
                 'Target: >0.5',

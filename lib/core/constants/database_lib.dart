@@ -91,6 +91,19 @@ class DBUtils{
     database.insert(tablename, data);
   }
 
+  /// Replace all sensor rows with [rows] in a single transaction.
+  static Future<void> replaceAllSensorData(
+    List<Map<String, Object?>> rows,
+  ) async {
+    final database = await db;
+    await database.transaction((txn) async {
+      await txn.delete(tablename);
+      for (final row in rows) {
+        await txn.insert(tablename, row);
+      }
+    });
+  }
+
  // read db
   static Future<List<Map<String, dynamic>>> getAllSensorData({int? limit, bool orderDesc = true}) async {
     final database = await db;

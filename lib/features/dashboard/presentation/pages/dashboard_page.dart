@@ -20,14 +20,14 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   int _selectedIndex = 0;
-  String _selectedMetric = 'Glucose';
+  String _selectedMetric = 'K+';
   String _selectedRange = 'Day';
-  String _selectedCardBiomarker = 'Glucose';
+  String _selectedCardBiomarker = 'K+';
 
-  final List<String> _metricOptions = ['Glucose', 'pH', 'K', 'Na'];
+  final List<String> _metricOptions = ['K+', 'pH', 'Glucose', 'Na'];
   final List<String> _rangeOptions = ['Day', 'Week', 'Month'];
 
-  // sensor data: sensor1=Glucose, sensor2=pH, sensor3=K, sensor4=Na
+  // sensor data mapping: sensor1=K+, sensor2=pH, sensor3=Glucose, sensor4=Na
   List<Map<String, dynamic>> _sensorData = [];
   double? _latestGlucose;
   double? _latestPH;
@@ -204,11 +204,11 @@ class _DashboardPageState extends State<DashboardPage> {
 
 String _getSensorColumnForMetric(String metric) {
   switch (metric) {
-    case 'Glucose': return 'sensor1';
+    case 'K+': return 'sensor1';
     case 'pH': return 'sensor2';
-    case 'K': return 'sensor3';
+    case 'Glucose': return 'sensor3';
     case 'Na': return 'sensor4';
-    default: return 'sensor1';
+    default: return 'sensor3';
   }
 }
 
@@ -216,8 +216,8 @@ String _getUnitForMetric(String metric) {
   switch (metric) {
     case 'Glucose': return 'mg/dL';
     case 'pH': return 'pH';
-    case 'K':
-    case 'Na': return 'mmol/L';
+    case 'K+':
+    case 'Na': return 'V';
     default: return '';
   }
 }
@@ -227,6 +227,7 @@ Widget _buildGlucoseKetoneChart() {
   final String yAxisLabel = _getUnitForMetric(_selectedMetric);
   final bool isGlucose = _selectedMetric == 'Glucose';
   final bool isPH = _selectedMetric == 'pH';
+  final bool isDayRange = _selectedRange == 'Day';
 
   List<FlSpot> chartData = [];
   DateTime? baseTimestamp;
@@ -248,12 +249,18 @@ Widget _buildGlucoseKetoneChart() {
       
       if (value != null && tsMillis != null && baseTimestamp != null) {
         final timestamp = DateTime.fromMillisecondsSinceEpoch(tsMillis);
-        final hoursSinceBase =
-            timestamp.difference(baseTimestamp).inMilliseconds / 3600000.0;
-        return FlSpot(hoursSinceBase, (value as num).toDouble());
+        final durationSinceBase = timestamp.difference(baseTimestamp);
+        final xValue = isDayRange
+            ? durationSinceBase.inMilliseconds / 3600000.0
+            : durationSinceBase.inMilliseconds / 86400000.0;
+        return FlSpot(xValue, (value as num).toDouble());
       }
       return null;
     }).whereType<FlSpot>().where((spot) => spot.y > 0).toList();
+  }
+
+  if (chartData.length > 180) {
+    chartData = _downsampleSpots(chartData, maxPoints: 180);
   }
   
   // dummy data when none
@@ -273,9 +280,13 @@ Widget _buildGlucoseKetoneChart() {
   double yMax = chartData.map((spot) => spot.y).reduce((a, b) => a > b ? a : b);
   double yRange = yMax - yMin;
   if (yRange == 0) {
-    if (isGlucose) yRange = 20;
-    else if (isPH) yRange = 0.5;
-    else yRange = 0.5;
+    if (isGlucose) {
+      yRange = 20;
+    } else if (isPH) {
+      yRange = 0.5;
+    } else {
+      yRange = 0.5;
+    }
   }
   yMin = (yMin - yRange * 0.1).clamp(0.0, double.infinity);
   yMax = yMax + yRange * 0.1;
@@ -283,17 +294,29 @@ Widget _buildGlucoseKetoneChart() {
   double yRangeWithPadding = yMax - yMin;
   double yInterval = yRangeWithPadding / 4;
   if (isGlucose) {
-    if (yInterval < 5) yInterval = 5;
-    else if (yInterval < 10) yInterval = 10;
-    else yInterval = (yInterval / 10).ceilToDouble() * 10;
+    if (yInterval < 5) {
+      yInterval = 5;
+    } else if (yInterval < 10) {
+      yInterval = 10;
+    } else {
+      yInterval = (yInterval / 10).ceilToDouble() * 10;
+    }
   } else if (isPH) {
-    if (yInterval < 0.1) yInterval = 0.1;
-    else if (yInterval < 0.2) yInterval = 0.2;
-    else yInterval = (yInterval * 2).ceilToDouble() / 2;
+    if (yInterval < 0.1) {
+      yInterval = 0.1;
+    } else if (yInterval < 0.2) {
+      yInterval = 0.2;
+    } else {
+      yInterval = (yInterval * 2).ceilToDouble() / 2;
+    }
   } else {
-    if (yInterval < 0.1) yInterval = 0.1;
-    else if (yInterval < 0.2) yInterval = 0.2;
-    else yInterval = (yInterval * 2).ceilToDouble() / 2;
+    if (yInterval < 0.1) {
+      yInterval = 0.1;
+    } else if (yInterval < 0.2) {
+      yInterval = 0.2;
+    } else {
+      yInterval = (yInterval * 2).ceilToDouble() / 2;
+    }
   }
 
   
@@ -309,16 +332,30 @@ Widget _buildGlucoseKetoneChart() {
   
   double xRangeWithPadding = xMax - xMin;
   double xInterval = xRangeWithPadding / 4;
-  if (xInterval <= 2) {
-    xInterval = 2;
-  } else if (xInterval <= 3) {
-    xInterval = 3;
-  } else if (xInterval <= 4) {
-    xInterval = 4;
-  } else if (xInterval <= 6) {
-    xInterval = 6;
+  if (isDayRange) {
+    if (xInterval <= 2) {
+      xInterval = 2;
+    } else if (xInterval <= 3) {
+      xInterval = 3;
+    } else if (xInterval <= 4) {
+      xInterval = 4;
+    } else if (xInterval <= 6) {
+      xInterval = 6;
+    } else {
+      xInterval = (xInterval / 6).ceilToDouble() * 6;
+    }
   } else {
-    xInterval = (xInterval / 6).ceilToDouble() * 6; 
+    if (xInterval <= 1) {
+      xInterval = 1;
+    } else if (xInterval <= 2) {
+      xInterval = 2;
+    } else if (xInterval <= 3) {
+      xInterval = 3;
+    } else if (xInterval <= 7) {
+      xInterval = 7;
+    } else {
+      xInterval = xInterval.ceilToDouble();
+    }
   }
 
   return Card(
@@ -386,7 +423,7 @@ Widget _buildGlucoseKetoneChart() {
                 lineBarsData: [
                   LineChartBarData(
                     spots: chartData,
-                    isCurved: true,
+                    isCurved: chartData.length < 60,
                     color: AppTheme.primaryColor,
                     barWidth: 3,
 
@@ -394,12 +431,12 @@ Widget _buildGlucoseKetoneChart() {
                     dotData: FlDotData(
                       show: true,
                       getDotPainter: (spot, percent, barData, index) =>
-                            FlDotCirclePainter(
-                          radius: dotSize,
-                          color: AppTheme.primaryColor,
-                          strokeWidth: 1.2,
-                          strokeColor: Colors.white,
-                        ),
+                          FlDotCirclePainter(
+                        radius: dotSize,
+                        color: AppTheme.primaryColor,
+                        strokeWidth: 1.2,
+                        strokeColor: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -448,10 +485,10 @@ Widget _buildGlucoseKetoneChart() {
                         
                         final displayTime = baseTimestamp.add(
                           Duration(
-                            minutes: (value * 60).round(),
+                            minutes: isDayRange ? (value * 60).round() : (value * 1440).round(),
                           ),
                         );
-                        final label = _selectedRange == 'Day'
+                        final label = isDayRange
                             ? _formatChartTime(displayTime)
                             : _formatChartDate(displayTime);
                         return Padding(
@@ -486,9 +523,13 @@ Widget _buildGlucoseKetoneChart() {
                           );
                         }
                         final displayTime = baseTimestamp.add(
-                          Duration(minutes: (touchedSpot.x * 60).round()),
+                          Duration(
+                            minutes: isDayRange
+                                ? (touchedSpot.x * 60).round()
+                                : (touchedSpot.x * 1440).round(),
+                          ),
                         );
-                        final timeStr = _selectedRange == 'Day'
+                        final timeStr = isDayRange
                             ? _formatChartTime(displayTime)
                             : _formatChartDate(displayTime);
                         final valueStr = isGlucose
@@ -644,9 +685,9 @@ Widget _buildGlucoseKetoneChart() {
     switch (biomarker) {
       case 'Glucose': return _latestGlucose;
       case 'pH': return _latestPH;
-      case 'K': return _latestK;
+      case 'K+': return _latestK;
       case 'Na': return _latestNa;
-      default: return _latestGlucose;
+      default: return _latestK;
     }
   }
 
@@ -654,9 +695,9 @@ Widget _buildGlucoseKetoneChart() {
     switch (biomarker) {
       case 'Glucose': return 85.0;
       case 'pH': return 7.35;
-      case 'K': return 4.0;
+      case 'K+': return 4.0;
       case 'Na': return 140.0;
-      default: return 85.0;
+      default: return 4.0;
     }
   }
 
@@ -730,11 +771,19 @@ Widget _buildGlucoseKetoneChart() {
   String _formatChartDate(DateTime timestamp) {
     final m = timestamp.month.toString().padLeft(2, '0');
     final d = timestamp.day.toString().padLeft(2, '0');
-    final hour = timestamp.hour;
-    final minute = timestamp.minute.toString().padLeft(2, '0');
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    return '$m/$d $displayHour:$minute$period';
+    return '$m/$d';
+  }
+
+  List<FlSpot> _downsampleSpots(List<FlSpot> spots, {required int maxPoints}) {
+    if (spots.length <= maxPoints) return spots;
+    final sampled = <FlSpot>[spots.first];
+    final step = (spots.length - 2) / (maxPoints - 2);
+    for (var i = 1; i < maxPoints - 1; i++) {
+      final idx = (i * step).round().clamp(1, spots.length - 2);
+      sampled.add(spots[idx]);
+    }
+    sampled.add(spots.last);
+    return sampled;
   }
 
   void _navigateToIndex(int index) {
